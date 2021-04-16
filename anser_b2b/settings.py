@@ -108,3 +108,5 @@ CORS_ALLOW_HEADERS = (
     'x-csrftoken',
     'x-requested-with',
 )
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
