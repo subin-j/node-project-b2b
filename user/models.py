@@ -17,7 +17,7 @@ class Corporation(models.Model):
     coname_eng = models.CharField(max_length=200, null=True)
     stock_name = models.CharField(max_length=200, null=True)
     ticker     = models.CharField(max_length=20, unique=True, null=True)
-    jurir_no   = models.CharField(max_length=50, unique=50, null=True)
+    jurir_no   = models.CharField(max_length=50, unique=True, null=True)
     bizr_no    = models.CharField(max_length=50, unique=True, null=True)
     adres      = models.CharField(max_length=200, null=True)
     hm_url     = models.CharField(max_length=500, null=True)
