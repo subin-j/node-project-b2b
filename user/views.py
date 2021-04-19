@@ -86,12 +86,12 @@ class EditProfileView(View):
 
 class DeleteAccountView(View):
     @auth_check
-    def delete(self,request,user_id):
+    def delete(self,request):
         try:
             user_id = request.user.id
             user = User.objects.get(id= user_id)
             user.delete()
-            return JsonResponse({'messege':'SUCCESS'},status=204)
+            return JsonResponse(status=204)
 
         except KeyError:
             return JsonResponse({'message': 'KEY_ERROR'}, status=400)
