@@ -80,8 +80,40 @@ class SignInView(View):
 
 
 class EditProfileView(View):
-    pass
+    @auth_check
+    def patch(self, request):
+        try:
+            data = json.loads(request.body)
 
+            new_password = data['new_password']
+            login_user = request.user
+            # 패스워드 체크
+            password_check = bcrypt.check(new_password.encode('utf-8'), login_user.password.encode('utf-8'))
+            # 패스워드가 같으면 메세지
+            if password_check:
+                return JsonResponse({'message':'SAME_PASSWORD'}, status=400)
 
+            hashed_password = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+            login_user.password = hashed_password
+            login_user.save()
+            return JsonResponse({'message':'SUCCESS'}, status=201)
+            #token = bytes(data['token'], 'utf-8')
+            # password = data['password']
+            # 
+            # decoded_token = jwt.decode(token, SECRET_KEY, ALGORITHM)
+# 
+            # if not User.objects.filter(email=email).exist():
+                # return JsonResponse({'message':'INVALID_USER'}, status=401)
+# 
+            # user          = User.objects.get(id=decoded_token['user_id'])
+            # user.password = bcrypt.hashpw(password['resetPassword'].encode(), bcrypt.gensalt()).decode()
+            # user.save()
+
+            
+        except:
+            pass
+# 일단 이메일로 유저확인
+# 비밀번호 변경 (기존의 비밀번호와 새로운 비밀번호는 달라야함)
+# 새로운 비밀번호 해시로 저장
 class DeleteAccountView(View):
     pass
