@@ -2,6 +2,7 @@ import jwt
 import bcrypt
 import json
 import re
+
 from enum import Enum
 from json import JSONDecodeError
 
@@ -84,4 +85,13 @@ class EditProfileView(View):
 
 
 class DeleteAccountView(View):
-    pass
+    @auth_check
+    def delete(self,request):
+        try:
+            user_id = request.user.id
+            user = User.objects.get(id= user_id)
+            user.delete()
+            return JsonResponse(status=204)
+
+        except KeyError:
+            return JsonResponse({'message': 'KEY_ERROR'}, status=400)
