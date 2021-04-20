@@ -6,7 +6,7 @@ import re
 from enum import Enum
 from json import JSONDecodeError
 
-from django.http  import JsonResponse
+from django.http  import JsonResponse, HttpResponse
 from django.views import View
 
 from .models import User
@@ -91,7 +91,7 @@ class DeleteAccountView(View):
             user_id = request.user.id
             user = User.objects.get(id= user_id)
             user.delete()
-            return JsonResponse(status=204)
+            return HttpResponse(status=204)
 
         except KeyError:
             return JsonResponse({'message': 'KEY_ERROR'}, status=400)
