@@ -15,6 +15,7 @@ class Corporation(models.Model):
     phn_no                     = models.CharField(max_length=50, null=True)
     fax_no                     = models.CharField(max_length=50, null=True)
     est_dt                     = models.DateField(null=True)
+    is_financial_corporation   = models.BooleanField()
     accounting_month           = models.ForeignKey('AccountingMonth', on_delete=models.RESTRICT)
     corporation_classification = models.ForeignKey('CorporationClassification', on_delete=models.RESTRICT)
     industry_code              = models.ForeignKey('IndustryCode', on_delete=models.RESTRICT)
