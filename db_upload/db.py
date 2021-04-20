@@ -23,7 +23,7 @@ CORP_CLS_SET = [
 
 STOCK_TYPE_SET = ['우선주', '보통주']
 
-CURRENCY_UNIT_SET = ['원', '천원', '만원', '백만원', '천만원']
+CURRENCY_UNIT_SET = ['원', '천원', '만원', '백만원', '천만원', '일억원', '1조원']
 
 
 for month in range(1, 13):

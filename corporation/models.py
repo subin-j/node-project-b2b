@@ -82,6 +82,8 @@ class IncomeStatement(models.Model):
     ebit_con       = models.DecimalField(max_digits=20,decimal_places=2, null=True)
     ni_con         = models.DecimalField(max_digits=20,decimal_places=2, null=True)
     ni_control_con = models.DecimalField(max_digits=20,decimal_places=2, null=True)
+    asset_ind      = models.DecimalField(max_digits=20,decimal_places=2, null=True)
+    asset_con      = models.DecimalField(max_digits=20,decimal_places=2, null=True)
     corporation    = models.ForeignKey('Corporation', on_delete=models.CASCADE)
     currency_unit  = models.ForeignKey('CurrencyUnit', on_delete=models.RESTRICT)
 
