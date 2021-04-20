@@ -40,14 +40,14 @@ class CorporationClassification(models.Model):
 
 
 class AccountingMonth(models.Model):
-    month       = models.IntegerField()
+    month = models.IntegerField()
 
     class Meta:
         db_table = 'accounting_months'
 
 
 class IndustryCode(models.Model):
-    code        = models.CharField(max_length=50)
+    code = models.CharField(max_length=50)
 
     class Meta:
         db_table = 'industry_codes'
@@ -66,7 +66,7 @@ class MainShareholder(models.Model):
 
 
 class StockType(models.Model):
-    name             = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50, unique=True)
 
     class Meta:
         db_table = 'stock_types'
@@ -89,7 +89,7 @@ class IncomeStatement(models.Model):
 
 
 class CurrencyUnit(models.Model):
-    name             = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=20, unique=True)
 
     class Meta:
         db_table = 'currency_units'

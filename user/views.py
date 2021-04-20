@@ -2,10 +2,11 @@ import jwt
 import bcrypt
 import json
 import re
+
 from enum import Enum
 from json import JSONDecodeError
 
-from django.http  import JsonResponse
+from django.http  import JsonResponse, HttpResponse
 from django.views import View
 from django.db    import transaction
 
@@ -136,4 +137,13 @@ class EditProfileView(View):
         return True
 
 class DeleteAccountView(View):
-    pass
+    @auth_check
+    def delete(self,request):
+        try:
+            user_id = request.user.id
+            user = User.objects.get(id= user_id)
+            user.delete()
+            return HttpResponse(status=204)
+
+        except KeyError:
+            return JsonResponse({'message': 'KEY_ERROR'}, status=400)
