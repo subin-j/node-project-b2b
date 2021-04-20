@@ -44,8 +44,7 @@ class CorporationSearchView(View):
 
         corporation_kw = Corporation.objects.filter(
             Q(coname__icontains=keywords)|
-            Q(coname_eng__icontains=keywords)|
-            Q(stock_name__icontains=keywords)
+            Q(coname_eng__icontains=keywords)
         ).distinct()
 
         search_result = [{
