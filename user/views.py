@@ -13,6 +13,7 @@ from .models import User
 
 from my_settings      import SECRET_KEY, HASHING_ALGORITHM
 from utils.decorators import auth_check
+from utils.eng2kor    import engkor
 
 
 class SignUpView(View):
