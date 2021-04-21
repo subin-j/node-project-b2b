@@ -56,7 +56,11 @@ class IncomeStatementView(View):
             start_range = datetime.datetime.strptime('{}-12'.format(start_range), '%Y-%m')
             end_range   = datetime.datetime.strptime('{}-12'.format(end_range), '%Y-%m')
             
-            is_financial_corp = True if Corporation.objects.get(cocode=cocode).is_financial_corporation == 1 else False
+            corporation = Corporation.objects.get(cocode=cocode)
+
+            corp_name         = corporation.coname
+            corp_cls          = corporation.corporation_classification.symbol_description
+            is_financial_corp = True if corporation.is_financial_corporation == 1 else False
 
             income_statement_qs = IncomeStatement.objects.filter(
                                             corporation_id  = cocode,
@@ -210,17 +214,20 @@ class IncomeStatementView(View):
             
             
             output = {
-                'type'   : statement_type,
-                'display': display,
-                'unit'   : unit,
-                'start'  : start_range.strftime('%Y'),
-                'end'    : end_range.strftime('%Y'),
-                'cocode' : cocode,
-                'is_financial_corporation': is_financial_corp,
-                'data'   : results
+                'corp_name'               : corp_name,
+                'corp_cls'                : corp_cls,
+                'cocode'                  : cocode,
+                'type'                    : statement_type,
+                'display'                 : display,
+                'unit'                    : unit,
+                'start'                   : start_range.strftime('%Y'),
+                'end'                     : end_range.strftime('%Y'),
+                'is_financial_corporation': 'Y' if is_financial_corp == 1 else 'N',
+                'data'                    : results
             }
 
-            if is_excel:
+            # excel export
+            if int(is_excel) == 1:
                 excel_response = self.export_excel(output)
                 return excel_response
 
@@ -253,6 +260,33 @@ class IncomeStatementView(View):
 
         wb = xlwt.Workbook(encoding='utf-8')
         ws = wb.add_sheet('income-statement')
+
+        data = output['data']
+
+        row_num = 0
+        verbose_col_names = [
+                            '회사명',
+                            '회사구분',
+                            '회사고유번호',
+                            '연결(con)/개별(ind)',
+                            '원(won)/퍼센트(percent)',
+                            '1조(tril)/일억원(bil)/백만원(mil)',
+                            '시작년도',
+                            '종료년도',
+                            '금융회사여부'
+                        ]
+        
+        # 첫 row 에 verbose 데이터 표시, col_names 왼쪽에 표시
+        for col_num, col_name in enumerate(verbose_col_names):
+            ws.write(row_num, col_num, col_name)
+
+        # verbose 데이터 두번째 열부터 data 행 만큼 표시
+        for col_num, key in enumerate(output):
+            if key == 'data':
+                continue
+            content = output[key]
+            for row_num in range(1, len(data) + 1):
+                ws.write(row_num, col_num, content)
         
         row_num = 0
         if output['type'] == 'con':
@@ -268,31 +302,16 @@ class IncomeStatementView(View):
                 col_names = ['기간', '매출액', '영업이익', '당기순이익']
 
         # 첫 row 에 컬럼 추가
-        for idx, col_name in enumerate(col_names):
-            ws.write(row_num, idx, col_name)
+        for col_num, col_name in enumerate(col_names):
+            ws.write(row_num, col_num + len(verbose_col_names), col_name)
         
-        data = output['data']
         # 두번째 row 부터 데이터 추가
         for row in data:
             row_num +=1
             for col_num, key in enumerate(row):
                 content = row[key]
-                ws.write(row_num, col_num, content)
+                ws.write(row_num, col_num + len(verbose_col_names), content)
 
-        row_num = 0
-        col_names = ['연결(con)/개별(ind)', '원(won)/퍼센트(percent)', '1조(tril)/일억원(bil)/백만원(mil)', '시작년도', '종료년도', '회사고유번호', '금융회사여부']
-        
-        # 첫 row 에 전 데이터랑 구분해서 데이터 표시
-        for idx, col_name in enumerate(col_names):
-            ws.write(row_num, idx + 7, col_name)
-
-        for idx, key in enumerate(output):
-            if key == 'data':
-                continue
-
-            content = output[key]
-            ws.write(1, idx + 7, content)
-        
         wb.save(response)
         return response
     

@@ -15,7 +15,7 @@ from corporation.models import (
                                 )
 
 CORP_CLS_SET = [
-    ('Y', '유가'),
+    ('Y', '코스피'),
     ('K', '코스닥'),
     ('N', '코넥스'),
     ('E', '기타')
