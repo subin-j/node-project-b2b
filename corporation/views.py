@@ -13,6 +13,7 @@ from .models import IncomeStatement, CurrencyUnit, Corporation
 from utils.decorators import auth_check
 from utils.util       import handle_income_statement_input_error
 
+
 CURRENCY_UNITS = {
                 '원'  : 1,
                 '천원' : 10 ** 3,
@@ -131,6 +132,18 @@ class IncomeStatementView(View):
                         'ni_con'        : converter.convert_unit(income_statement.ni_con),
                         'ni_control_con': converter.convert_unit(income_statement.ni_control_con)
                     }
+
+                    if display == 'percentage':
+                        sales_con      = result['sales_con']
+                        ebit_con       = result['ebit_con']
+                        ni_con         = result['ni_con']
+                        ni_control_con = result['ni_control_con']
+
+                        result['sales_con']      = sales_con / sales_con * 100
+                        result['ebit_con']       = ebit_con / sales_con * 100
+                        result['ni_con']         = ni_con / sales_con * 100
+                        result['ni_control_con'] = ni_control_con / sales_con * 100
+
                     results.append(result)
 
             elif statement_type == 'ind':
@@ -145,10 +158,17 @@ class IncomeStatementView(View):
                         'ebit_ind' : converter.convert_unit(income_statement.ebit_ind),
                         'ni_ind'   : converter.convert_unit(income_statement.ni_ind)
                     }
-                    results.append(result)
 
-            else:
-                return JsonResponse({'message': 'TYPE_ERROR'}, status=400)
+                    if display == 'percentage':
+                        sales_ind = result['sales_ind']
+                        ebit_ind  = result['ebit_ind']
+                        ni_ind    = result['ni_ind']
+
+                        result['sales_ind']      = sales_ind / sales_ind * 100
+                        result['ebit_ind']       = ebit_ind / sales_ind * 100
+                        result['ni_ind']         = ni_ind / sales_ind * 100
+
+                    results.append(result)
             
             # 시작 종료년도가 같으면 yoy 랑 cagr 계산하지 않음
             if start_year.year != end_year.year:
@@ -203,7 +223,7 @@ class IncomeStatementView(View):
         start_year_val = float(start_year_val)
         end_year_val   = float(end_year_val)
 
-        if start_year_val * end_year_val < 0:
+        if start_year_val < 0 or end_year_val < 0:
             return None
         return ((end_year_val / start_year_val) ** (1 / years_between)) - 1
 
