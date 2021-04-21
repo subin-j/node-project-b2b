@@ -38,6 +38,34 @@ class CurrencyUnitConverter(object):
         return (float(amount) * CURRENCY_UNITS[self.from_unit]) / CURRENCY_UNITS[self.to_unit]
 
 
+class CompareYoY(object):
+    """
+    before_end_year_income_statement: 종료직전년도 income_statement object
+    end'_year_income_statement      : 종료년도 income_statement object
+    is_financial_corp               : 금융회사 여부 => Y/N
+    statement_type                  : 연결/단독 여부 -> con/ind
+    """
+    def __init__(self, before_end_year_income_statement, end_year_income_statement, is_financial_corp, statement_type):
+        self.before_end_year_income_statement = before_end_year_income_statement
+        self.end_year_income_statement        = end_year_income_statement
+        self.is_financial_corp                = is_financial_corp
+        self.statement_type                   = statement_type
+
+
+class CompareCAGR(object):
+    """
+    start_year_income_statement: 시작년도 income_statement object
+    end_year_income_statement  : 종료년도 income_statement object
+    is_financial_corp          : 금융회사 여부 => Y/N
+    statement_type             : 연결/단독 여부 -> con/ind
+    """
+    def __init__(self, start_year_income_statement, end_year_income_statement, is_financial_corp, statement_type):
+        self.start_year_income_statement = start_year_income_statement
+        self.end_year_income_statement   = end_year_income_statement
+        self.is_financial_corp           = is_financial_corp
+        self.statement_type              = statement_type
+
+
 class IncomeStatementView(View):
     # @auth_check
     def get(self, request):
@@ -48,13 +76,13 @@ class IncomeStatementView(View):
             unit           = request.GET.get('unit', 'bil')
             start_range    = request.GET.get('start', '2017')
             end_range      = request.GET.get('end', '2020')
-            is_excel       = request.GET.get('is_excel', None)
+            is_excel       = request.GET.get('is_excel', '0')
 
-            if int(start_range) >= int(end_range):
-                return JsonResponse({'message': 'END_YEAR_SHOULD_BE_LATER_THAN_START_YEAR'}) 
+            if int(start_range) > int(end_range): 
+                return JsonResponse({'message': "END_YEAR_SHOULD_BE_LATER_THAN_START_YEAR"}, status=400)
 
-            start_range = datetime.datetime.strptime('{}-12'.format(start_range), '%Y-%m')
-            end_range   = datetime.datetime.strptime('{}-12'.format(end_range), '%Y-%m')
+            start_range = datetime.datetime.strptime('{}-1-1'.format(start_range), '%Y-%m-%d')
+            end_range   = datetime.datetime.strptime('{}-12-31'.format(end_range), '%Y-%m-%d')
             
             corporation = Corporation.objects.get(cocode=cocode)
 
@@ -68,8 +96,12 @@ class IncomeStatementView(View):
                                             year_month__lte = end_range
                                             ).order_by('year_month')
 
-            start_year      = income_statement_qs.last().year_month
-            before_end_year = start_year - relativedelta(years=1)
+            if not income_statement_qs:
+                return JsonResponse({'message': 'RESULT_NOT_FOUND'}, state=404)
+
+            start_year      = income_statement_qs.first().year_month
+            end_year        = income_statement_qs.last().year_month
+            before_end_year = end_year - relativedelta(years=1)
 
             start_year_income_statement      = income_statement_qs.first()
             end_year_income_statement        = income_statement_qs.last()
@@ -91,62 +123,6 @@ class IncomeStatementView(View):
                     }
                     results.append(result)
 
-                yoy = {
-                    'period'        : 'YoY%',
-                    'sales_con'     : self.get_yoy(
-                                                end_year_income_statement.sales_con,
-                                                before_end_year_income_statement.sales_con
-                                                ) if not is_financial_corp else 
-                                      self.get_yoy(
-                                                end_year_income_statement.asset_con,
-                                                before_end_year_income_statement.asset_con
-                                      ),
-                    'ebit_con'      : self.get_yoy(
-                                                end_year_income_statement.ebit_con,
-                                                before_end_year_income_statement.ebit_con
-                                                ),
-                    'ni_con'        : self.get_yoy(
-                                                end_year_income_statement.ni_con,
-                                                before_end_year_income_statement.ni_con
-                                                ),
-                    'ni_control_con': self.get_yoy(
-                                                end_year_income_statement.ni_control_con,
-                                                before_end_year_income_statement.ni_control_con
-                                                )
-                    }
-                results.append(yoy)
-                years_between = end_year_income_statement.year_month.year - start_year_income_statement.year_month.year
-
-                cagr = {
-                    'period'        : 'CAGR%',
-                    'sales_con'     : self.get_cagr(
-                                                start_year_income_statement.sales_con,
-                                                end_year_income_statement.sales_con,
-                                                years_between
-                                                ) if not is_financial_corp else
-                                      self.get_cagr(
-                                                start_year_income_statement.asset_con,
-                                                end_year_income_statement.asset_con,
-                                                years_between
-                                                ),
-                    'ebit_con'      : self.get_cagr(
-                                                start_year_income_statement.ebit_con,
-                                                end_year_income_statement.ebit_con,
-                                                years_between
-                                                ),
-                    'ni_con'        : self.get_cagr(
-                                                start_year_income_statement.ni_con,
-                                                end_year_income_statement.ni_con,
-                                                years_between
-                                                ),
-                    'ni_control_con': self.get_cagr(
-                                                start_year_income_statement.ni_control_con,
-                                                end_year_income_statement.ni_control_con,
-                                                years_between
-                                                )
-                }
-                results.append(cagr)
-
             elif statement_type == 'ind':
                 for income_statement in income_statement_qs:
                     converter = CurrencyUnitConverter(income_statement.currency_unit.name, unit)
@@ -161,58 +137,31 @@ class IncomeStatementView(View):
                     }
                     results.append(result)
 
-                yoy = {
-                    'period'        : 'YoY%',
-                    'sales_ind'     : self.get_yoy(
-                                                end_year_income_statement.sales_ind,
-                                                before_end_year_income_statement.sales_ind
-                                                ) if not is_financial_corp else 
-                                      self.get_yoy(
-                                                end_year_income_statement.asset_ind,
-                                                before_end_year_income_statement.asset_ind
-                                      ),
-                    'ebit_ind'      : self.get_yoy(
-                                                end_year_income_statement.ebit_ind,
-                                                before_end_year_income_statement.ebit_ind
-                                                ),
-                    'ni_ind'        : self.get_yoy(
-                                                end_year_income_statement.ni_ind,
-                                                before_end_year_income_statement.ni_ind
-                                                )
-                    }
-                results.append(yoy)
-
-                years_between = end_year_income_statement.year_month.year - start_year_income_statement.year_month.year
-
-                cagr = {
-                    'period'        : 'CAGR%',
-                    'sales_ind'     : self.get_cagr(
-                                                start_year_income_statement.sales_ind,
-                                                end_year_income_statement.sales_ind,
-                                                years_between
-                                                ) if not is_financial_corp else
-                                      self.get_cagr(
-                                                start_year_income_statement.asset_ind,
-                                                end_year_income_statement.asset_ind,
-                                                years_between
-                                                ),
-                    'ebit_ind'      : self.get_cagr(
-                                                start_year_income_statement.ebit_ind,
-                                                end_year_income_statement.ebit_ind,
-                                                years_between
-                                                ),
-                    'ni_ind'        : self.get_cagr(
-                                                start_year_income_statement.ni_ind,
-                                                end_year_income_statement.ni_ind,
-                                                years_between
-                                                )
-                    }
-                results.append(cagr)
-
             else:
                 return JsonResponse({'message': 'TYPE_ERROR'}, status=400)
             
-            
+            # 시작 종료년도가 같으면 yoy 랑 cagr 계산하지 않음
+            if start_year.year != end_year.year:
+                compare_yoy = CompareYoY(
+                                    before_end_year_income_statement,
+                                    end_year_income_statement,
+                                    is_financial_corp,
+                                    statement_type
+                                    )
+
+                yoy = self.get_yoy_set(compare_yoy)
+                results.append(yoy)
+
+                compare_cagr = CompareCAGR(
+                                        start_year_income_statement,
+                                        end_year_income_statement,
+                                        is_financial_corp,
+                                        statement_type
+                                        )
+
+                cagr = self.get_cagr_set(compare_cagr)
+                results.append(cagr)
+
             output = {
                 'corp_name'               : corp_name,
                 'corp_cls'                : corp_cls,
@@ -238,7 +187,7 @@ class IncomeStatementView(View):
         except Corporation.DoesNotExist:
             return JsonResponse({'message': 'CORPORATION_DOES_NOT_EXIST'}, status=404)
 
-    def get_cagr(self, start_year_val, end_year_val, years_between):
+    def _get_cagr(self, start_year_val, end_year_val, years_between):
         start_year_val = float(start_year_val)
         end_year_val   = float(end_year_val)
 
@@ -246,13 +195,130 @@ class IncomeStatementView(View):
             return None
         return ((end_year_val / start_year_val) ** (1 / years_between)) - 1
 
-    def get_yoy(self, end_year_val, before_end_year_val):
+    def _get_yoy(self, end_year_val, before_end_year_val):
         end_year_val        = float(end_year_val)
         before_end_year_val = float(before_end_year_val)
         
         if before_end_year_val == 0:
             return None
         return (end_year_val / before_end_year_val) - 1
+
+    def get_yoy_set(self, compare_income_statement_obj):
+        end_year_income_statement        = compare_income_statement_obj.end_year_income_statement
+        before_end_year_income_statement = compare_income_statement_obj.before_end_year_income_statement
+        is_financial_corp                = compare_income_statement_obj.is_financial_corp
+        statement_type                   = compare_income_statement_obj.statement_type
+
+        if statement_type == 'con':
+            yoy = {
+                'period'        : 'YoY%',
+                'sales_con'     : self._get_yoy(
+                                            end_year_income_statement.sales_con,
+                                            before_end_year_income_statement.sales_con
+                                            ) if not is_financial_corp else 
+                                    self._get_yoy(
+                                            end_year_income_statement.asset_con,
+                                            before_end_year_income_statement.asset_con
+                                    ),
+                'ebit_con'      : self._get_yoy(
+                                            end_year_income_statement.ebit_con,
+                                            before_end_year_income_statement.ebit_con
+                                            ),
+                'ni_con'        : self._get_yoy(
+                                            end_year_income_statement.ni_con,
+                                            before_end_year_income_statement.ni_con
+                                            ),
+                'ni_control_con': self._get_yoy(
+                                            end_year_income_statement.ni_control_con,
+                                            before_end_year_income_statement.ni_control_con
+                                            )
+            }
+            return yoy
+
+        yoy = {
+                'period'        : 'YoY%',
+                'sales_ind'     : self._get_yoy(
+                                            end_year_income_statement.sales_ind,
+                                            before_end_year_income_statement.sales_ind
+                                            ) if not is_financial_corp else 
+                                    self._get_yoy(
+                                            end_year_income_statement.asset_ind,
+                                            before_end_year_income_statement.asset_ind
+                                    ),
+                'ebit_ind'      : self._get_yoy(
+                                            end_year_income_statement.ebit_ind,
+                                            before_end_year_income_statement.ebit_ind
+                                            ),
+                'ni_ind'        : self._get_yoy(
+                                            end_year_income_statement.ni_ind,
+                                            before_end_year_income_statement.ni_ind
+                                            )
+                }
+        return yoy
+
+    def get_cagr_set(self, compare_income_statement_obj):
+        start_year_income_statement = compare_income_statement_obj.start_year_income_statement
+        end_year_income_statement   = compare_income_statement_obj.end_year_income_statement
+        is_financial_corp           = compare_income_statement_obj.is_financial_corp
+        statement_type                   = compare_income_statement_obj.statement_type
+
+        years_between = end_year_income_statement.year_month.year - start_year_income_statement.year_month.year
+
+        if statement_type == 'con':
+            cagr = {
+                'period'        : 'CAGR%',
+                'sales_con'     : self._get_cagr(
+                                            start_year_income_statement.sales_con,
+                                            end_year_income_statement.sales_con,
+                                            years_between
+                                            ) if not is_financial_corp else
+                                    self._get_cagr(
+                                            start_year_income_statement.asset_con,
+                                            end_year_income_statement.asset_con,
+                                            years_between
+                                            ),
+                'ebit_con'      : self._get_cagr(
+                                            start_year_income_statement.ebit_con,
+                                            end_year_income_statement.ebit_con,
+                                            years_between
+                                            ),
+                'ni_con'        : self._get_cagr(
+                                            start_year_income_statement.ni_con,
+                                            end_year_income_statement.ni_con,
+                                            years_between
+                                            ),
+                'ni_control_con': self._get_cagr(
+                                            start_year_income_statement.ni_control_con,
+                                            end_year_income_statement.ni_control_con,
+                                            years_between
+                                            )
+            }
+            return cagr
+
+        cagr = {
+            'period'        : 'CAGR%',
+            'sales_ind'     : self._get_cagr(
+                                        start_year_income_statement.sales_ind,
+                                        end_year_income_statement.sales_ind,
+                                        years_between
+                                        ) if not is_financial_corp else
+                                self._get_cagr(
+                                        start_year_income_statement.asset_ind,
+                                        end_year_income_statement.asset_ind,
+                                        years_between
+                                        ),
+            'ebit_ind'      : self._get_cagr(
+                                        start_year_income_statement.ebit_ind,
+                                        end_year_income_statement.ebit_ind,
+                                        years_between
+                                        ),
+            'ni_ind'        : self._get_cagr(
+                                        start_year_income_statement.ni_ind,
+                                        end_year_income_statement.ni_ind,
+                                        years_between
+                                        )
+            }
+        return cagr
 
     def export_excel(self, output):
         response = HttpResponse(content_type="application/vnd.ms-excel")
