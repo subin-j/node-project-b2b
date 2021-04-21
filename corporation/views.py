@@ -290,14 +290,14 @@ class IncomeStatementView(View):
         
         row_num = 0
         if output['type'] == 'con':
-            if output['is_financial_corporation'] == 1:
+            if output['is_financial_corporation'] == 'Y':
                 col_names = ['기간', '자산', '영업이익', '당기순이익', '당기순이익(지배주주)']
             else:
                 col_names = ['기간', '매출액', '영업이익', '당기순이익', '당기순이익(지배주주)']
 
         elif output['type'] == 'ind':
-            if output['is_financial_corporation'] == 1:
-                col_names = ['기간', '자산', '영업이익', '당기순이익', '당기순이익(지배주주)']
+            if output['is_financial_corporation'] == 'Y':
+                col_names = ['기간', '자산', '영업이익', '당기순이익']
             else:
                 col_names = ['기간', '매출액', '영업이익', '당기순이익']
 
