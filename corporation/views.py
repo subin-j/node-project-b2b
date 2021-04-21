@@ -1,6 +1,7 @@
 import json
 import datetime
 import xlwt
+
 from dateutil.relativedelta import relativedelta
 from json import JSONDecodeError
 
@@ -10,7 +11,7 @@ from django.http  import JsonResponse, HttpResponse
 from .models import IncomeStatement, CurrencyUnit, Corporation
 
 from utils.decorators import auth_check
-
+from utils.util       import handle_income_statement_input_error
 
 CURRENCY_UNITS = {
                 '원'  : 1,
@@ -78,8 +79,17 @@ class IncomeStatementView(View):
             end_range      = request.GET.get('end', '2020')
             is_excel       = request.GET.get('is_excel', '0')
 
-            if int(start_range) > int(end_range): 
-                return JsonResponse({'message': "END_YEAR_SHOULD_BE_LATER_THAN_START_YEAR"}, status=400)
+            error_handler_res = handle_income_statement_input_error(
+                                                                    statement_type,
+                                                                    display,
+                                                                    unit,
+                                                                    start_range,
+                                                                    end_range,
+                                                                    is_excel
+                                                                    )
+
+            if isinstance(error_handler_res, JsonResponse):
+                return error_handler_res
 
             start_range = datetime.datetime.strptime('{}-1-1'.format(start_range), '%Y-%m-%d')
             end_range   = datetime.datetime.strptime('{}-12-31'.format(end_range), '%Y-%m-%d')
@@ -186,6 +196,8 @@ class IncomeStatementView(View):
             return JsonResponse({'message': 'KEY_ERROR'}, status=400)
         except Corporation.DoesNotExist:
             return JsonResponse({'message': 'CORPORATION_DOES_NOT_EXIST'}, status=404)
+        except TypeError:
+            return JsonResponse({'message': 'TYPE_ERROR'}, status=400)
 
     def _get_cagr(self, start_year_val, end_year_val, years_between):
         start_year_val = float(start_year_val)
@@ -260,7 +272,7 @@ class IncomeStatementView(View):
         start_year_income_statement = compare_income_statement_obj.start_year_income_statement
         end_year_income_statement   = compare_income_statement_obj.end_year_income_statement
         is_financial_corp           = compare_income_statement_obj.is_financial_corp
-        statement_type                   = compare_income_statement_obj.statement_type
+        statement_type              = compare_income_statement_obj.statement_type
 
         years_between = end_year_income_statement.year_month.year - start_year_income_statement.year_month.year
 
