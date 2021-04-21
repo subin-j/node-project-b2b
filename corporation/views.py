@@ -51,20 +51,30 @@ class CorporationInfoView(View):
 
 class CorporationSearchView(View):
     def get(self, request):
-        keywords = request.GET.get('q')
+        try:
+            keywords = request.GET.get('q')
 
-        corporation_kw = Corporation.objects.filter(
-            Q(coname__icontains=keywords)|
-            Q(coname_eng__icontains=keywords) |
-            Q(ticker__icontains=keywords)
-        ).distinct()
+            if not keywords:
+                return JsonResponse({'message': 'NOT_VALID'}, status=400)
+                
+            corporation_kw = Corporation.objects.filter(
+                Q(coname__icontains=keywords)|
+                Q(coname_eng__icontains=keywords) |
+                Q(ticker__icontains=keywords)
+            ).distinct()
 
-        search_result = [{
-            'cocode'        : kw.cocode,
-            'coname'        : kw.coname,      
-            'coname_eng'    : kw.coname_eng,  
-            'corp_cls'      : kw.corporation_classification.symbol_description,
-            'ticker'        : kw.ticker
-        } for kw in corporation_kw]
+            if not corporation_kw:
+                return JsonResponse({'message':'NOT_FOUND'}, status=404)
 
-        return JsonResponse({'search_result':search_result}, status=200)
+            search_result = [{
+                'cocode'        : kw.cocode,
+                'coname'        : kw.coname,      
+                'coname_eng'    : kw.coname_eng,  
+                'corp_cls'      : kw.corporation_classification.symbol_description,
+                'ticker'        : kw.ticker
+            } for kw in corporation_kw]
+
+            return JsonResponse({'search_result':search_result}, status=200)
+
+        except KeyError:
+            return JsonResponse({"message":"KEY_ERROR"},status=400)
