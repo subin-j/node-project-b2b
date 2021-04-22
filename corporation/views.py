@@ -1,9 +1,13 @@
 import json
 import datetime
 import xlwt
+import requests
+import pandas
 
-from dateutil.relativedelta import relativedelta
-from json import JSONDecodeError
+from io                      import BytesIO
+from json                    import JSONDecodeError
+from requests.exceptions     import MissingSchema
+from dateutil.relativedelta  import relativedelta
 
 from django.views import View
 from django.http  import JsonResponse, HttpResponse
@@ -413,3 +417,40 @@ class IncomeStatementView(View):
         wb.save(response)
         return response
     
+
+class CorpExcelExporter(View):
+    def get(self, request):
+        try:
+            urls = request.GET.getlist('url')
+            if not urls:
+                return JsonResponse({'message': 'EMPTY_INPUT'}, status=400)
+
+            wb = xlwt.Workbook(encoding='utf-8')
+
+            responses = [requests.get(url) for url in urls if requests.get(url).status_code == 200]
+            if not responses:
+                return JsonResponse({'message': 'INVALID_URL'}, status=400)
+
+            data_frames = [
+                (
+                    pandas.read_excel(response.content),
+                    pandas.ExcelFile(response.content).sheet_names[0]
+                )
+                for response in responses]
+
+            with BytesIO() as b:
+                writer = pandas.ExcelWriter(b, engine='xlsxwriter')
+
+                for df, sheet_name in data_frames:
+                    df.to_excel(writer, sheet_name=sheet_name, index=False)
+                writer.save()
+
+                response = HttpResponse(b.getvalue(), content_type='application/vnd.ms-excel')
+
+            response["Content-Disposition"] = 'attachment; filename="corporation_info.xls"'
+            return response
+
+        except MissingSchema:
+            return JsonResponse({'message': 'URL_FORMAT_NOT_VALID'}, status=400)
+        except ValueError:
+            return JsonResponse({'message': 'NOT_RECOGNIZED_EXCEL_FILE'}, status=400)
