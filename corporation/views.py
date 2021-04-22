@@ -15,7 +15,7 @@ from django.http  import JsonResponse, HttpResponse
 from .models import IncomeStatement, CurrencyUnit, Corporation
 
 from utils.decorators import auth_check
-from utils.util       import handle_income_statement_input_error
+from utils.util       import handle_income_statement_input_error, handle_excel_exporter_input_error
 
 
 CURRENCY_UNITS = {
@@ -421,9 +421,12 @@ class IncomeStatementView(View):
 class CorpExcelExporter(View):
     def get(self, request):
         try:
-            urls = request.GET.getlist('url')
-            if not urls:
-                return JsonResponse({'message': 'EMPTY_INPUT'}, status=400)
+            urls        = request.GET.getlist('url')
+            server_host = request.get_host()
+
+            error_handler_res = handle_excel_exporter_input_error(server_host, urls)
+            if isinstance(error_handler_res, JsonResponse):
+                return error_handler_res
 
             wb = xlwt.Workbook(encoding='utf-8')
 
