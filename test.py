@@ -65,4 +65,3 @@ def engkor(text):
 
 
     return join_jamos(result)  
-print(join_jamos('tkatjd'))

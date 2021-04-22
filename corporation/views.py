@@ -21,13 +21,14 @@ class CorporationInfoView(View):
             cocode = request.GET.get('cocode')
             is_excel = request.GET.get('is_excel', '0')
 
-            corp_info_lists = Corporation.objects.filter(cocode=cocode)#.select_related(
-                # 'CorporationClassification',
-                # 'AccountingMonth',
-                # 'IndustryCode'
-            # ).prefetch_related(
-                # 'ceoname_set'
-            # ).first()
+            corp_info_lists = Corporation.objects.filter(cocode=cocode).select_related(
+                'corporation_classification',
+                'accounting_month',
+                'industry_code',
+            ).prefetch_related(
+                'ceoname_set',
+            )
+
             corp_info_lists = [{
                 'cocode'        : corp_info_list.cocode,
                 'coname'        : corp_info_list.coname,      
