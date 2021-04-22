@@ -6,6 +6,6 @@ from .views import (SignUpView, SignInView,
 urlpatterns = [
     path('/sign-up', SignUpView.as_view()),
     path('/sign-in', SignInView.as_view()),
-    path('/edit', EditProfileView.as_view()),
+    path('/user', EditProfileView.as_view()),
     path('',DeleteAccountView.as_view())
 ]
