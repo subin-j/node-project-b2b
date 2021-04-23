@@ -16,7 +16,8 @@ from .models     import (
     IndustryCode,
     IncomeStatement,
     CurrencyUnit,
-    Corporation
+    Corporation,
+    MainShareholder
 )
 
 from utils.decorators       import auth_check
