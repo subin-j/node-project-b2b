@@ -185,7 +185,7 @@ class MainShareHoldersView(View):
         except TypeError:
             return JsonResponse(({'message':'TYPE_ERROR'}), status=400)
         except Corporation.DoesNotExist:
-            return JsonResponse(({'message':'DOES_NOT_EXIST'}), status=400) 
+            return JsonResponse(({'message':'DOES_NOT_EXIST'}), status=404) 
 
     def export_excel_mainshareholders(self, main_shareholder_list):
         response                        = HttpResponse(content_type="application/vnd.ms-excel")
