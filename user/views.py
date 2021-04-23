@@ -79,9 +79,10 @@ class SignInView(View):
         except JSONDecodeError:
             return JsonResponse({'meesage': 'JSON_DECODE_ERROR'}, status=400)
 
-class EditProfileView(View):
+
+class ProfileView(View):
     def __init__(self):
-        super(EditProfileView, self).__init__()
+        super(ProfileView, self).__init__()
         self.login_user = None
 
     @transaction.atomic
@@ -136,7 +137,6 @@ class EditProfileView(View):
         self.login_user.save()
         return True
 
-class DeleteAccountView(View):
     @auth_check
     def delete(self,request):
         try:
