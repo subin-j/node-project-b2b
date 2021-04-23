@@ -157,7 +157,7 @@ class MainShareHoldersView(View):
     def get(self, request):
         try:
             cocode     = request.GET.get('cocode', '')
-            stock_type = int(request.GET.get('stock_type', ''))
+            stock_type = int(request.GET.get('stock_type', '2'))
             is_excel   = int(request.GET.get('is_excel', '0'))
 
             corporation = Corporation.objects.get(cocode=cocode)
@@ -165,7 +165,12 @@ class MainShareHoldersView(View):
             if stock_type not in [1, 2]: 
                 return JsonResponse({'message':'ERROR_STOCK_TYPE_NOT_BOUND'}, status=400)
             
-            holders = MainShareholder.objects.filter(corporation=corporation, stock_type=stock_type).select_related('stock_type')
+            if stock_type == 1:
+                stock_type = '우선주'
+            else:
+                stock_type = '보통주'
+
+            holders = MainShareholder.objects.filter(corporation=corporation, stock_type__name=stock_type).select_related('stock_type')
             main_shareholder_list = [
                 {
                 'corp'      : holder.nm,
