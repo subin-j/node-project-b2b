@@ -1,12 +1,12 @@
-import xlwt
 import datetime
+import xlwt
 
 from dateutil.relativedelta import relativedelta
-from json import JSONDecodeError
+from json                   import JSONDecodeError
 
-from django.http      import JsonResponse, HttpResponse
-from django.views     import View
-from django.db.models import Q
+from django.views           import View
+from django.http            import JsonResponse, HttpResponse
+from django.db.models       import Q
 
 from .models     import (
     Corporation,
@@ -16,12 +16,14 @@ from .models     import (
     IndustryCode,
     IncomeStatement,
     CurrencyUnit,
-    Corporation
+    Corporation,
+    MainShareholder
 )
 
-from utils.decorators import auth_check
-from utils.util       import handle_income_statement_input_error
-from utils.eng2kor    import engkor
+from utils.decorators       import auth_check
+from utils.util             import handle_income_statement_input_error
+from utils.eng2kor          import engkor
+
 
 CURRENCY_UNITS = {
                 '원'  : 1,
@@ -43,9 +45,7 @@ class CorporationInfoView(View):
             cocode   = request.GET.get('cocode')
             is_excel = request.GET.get('is_excel', '0')
 
-            
             corp_info = Corporation.objects.get(cocode=cocode)
-                        
             corp_info_list = {
                 'cocode'        : corp_info.cocode,
                 'coname'        : corp_info.coname,      
@@ -151,6 +151,67 @@ class CorporationSearchView(View):
 
         except KeyError:
             return JsonResponse({"message":"KEY_ERROR"},status=400)
+
+
+class MainShareHoldersView(View):
+    def get(self, request):
+        try:
+            cocode     = request.GET.get('cocode', '')
+            stock_type = int(request.GET.get('stock_type', '2'))
+            is_excel   = int(request.GET.get('is_excel', '0'))
+
+            corporation = Corporation.objects.get(cocode=cocode)
+
+            if stock_type not in [1, 2]: 
+                return JsonResponse({'message':'ERROR_STOCK_TYPE_NOT_BOUND'}, status=400)
+            
+            if stock_type == 1:
+                stock_type = '우선주'
+            else:
+                stock_type = '보통주'
+
+            holders = MainShareholder.objects.filter(corporation=corporation, stock_type__name=stock_type).select_related('stock_type')
+            main_shareholder_list = [
+                {
+                'corp'      : holder.nm,
+                'perc'      : float(holder.bsis_posesn_stock_qota_rt),
+                'stock_type': holder.stock_type.name
+            } for holder in holders]
+
+            if is_excel == 1:
+                    return self.export_excel_mainshareholders(main_shareholder_list)
+
+            return JsonResponse(({'content':main_shareholder_list}), status=200)
+        except TypeError:
+            return JsonResponse(({'message':'TYPE_ERROR'}), status=400)
+        except Corporation.DoesNotExist:
+            return JsonResponse(({'message':'DOES_NOT_EXIST'}), status=404) 
+
+    def export_excel_mainshareholders(self, main_shareholder_list):
+        response                        = HttpResponse(content_type="application/vnd.ms-excel")
+        response["Content-Disposition"] = 'attachment; filename="main-shareholders.xls"'
+
+        wb = xlwt.Workbook(encoding='utf-8')
+        ws = wb.add_sheet('main-shareholders')
+
+        row_num   = 0
+        col_names = [
+                            '주주명',
+                            '지분(%)',
+                            '우선주/보통주'
+                        ]
+
+        for col_num, col_name in enumerate(col_names):
+            ws.write(row_num, col_num, col_name)
+        
+        row_start_num = 1
+        for row_num, main_shareholder in enumerate(main_shareholder_list):
+            for col_num, key in enumerate(main_shareholder):
+                val = main_shareholder[key]
+                ws.write(row_num + row_start_num, col_num, val)
+
+        wb.save(response)
+        return response
 
 
 class CurrencyUnitConverter(object):
@@ -537,4 +598,3 @@ class IncomeStatementView(View):
 
         wb.save(response)
         return response
-    
