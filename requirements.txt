@@ -6,6 +6,7 @@ cffi==1.14.5
 decorator==5.0.7
 Django==3.2
 django-cors-headers==3.7.0
+hangul-utils==0.2
 ipython==7.22.0
 ipython-genutils==0.2.0
 jedi==0.18.0

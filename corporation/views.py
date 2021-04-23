@@ -154,27 +154,30 @@ class CorporationSearchView(View):
 
 class MainShareHoldersView(View):
     def get(self, request):
-        cocode     = request.GET.get('cocode', '')
-        stock_type = int(request.GET.get('stock_type', ''))
-        is_excel   = int(request.GET.get('is_excel', ''))
+        try:
+            cocode     = request.GET.get('cocode', '')
+            stock_type = int(request.GET.get('stock_type', ''))
+            is_excel   = int(request.GET.get('is_excel', '0'))
 
-        corporation = Corporation.objects.get(cocode=cocode)
+            corporation = Corporation.objects.get(cocode=cocode)
 
-        if stock_type not in [1, 2]: 
-            return JsonResponse({'message':'ERROR_STOCK_TYPE_NOT_BOUND'}, status=400)
-        
-        holders = MainShareholder.objects.filter(corporation=corporation, stock_type=stock_type).select_related('stock_type')
-        main_shareholder_list = [
-            {
-            'corp'      : holder.nm,
-            'perc'      : float(holder.bsis_posesn_stock_qota_rt),
-            'stock_type': holder.stock_type.name
-        } for holder in holders]
+            if stock_type not in [1, 2]: 
+                return JsonResponse({'message':'ERROR_STOCK_TYPE_NOT_BOUND'}, status=400)
+            
+            holders = MainShareholder.objects.filter(corporation=corporation, stock_type=stock_type).select_related('stock_type')
+            main_shareholder_list = [
+                {
+                'corp'      : holder.nm,
+                'perc'      : float(holder.bsis_posesn_stock_qota_rt),
+                'stock_type': holder.stock_type.name
+            } for holder in holders]
 
-        if is_excel == 1:
-                return self.export_excel_mainshareholders(main_shareholder_list)
+            if is_excel == 1:
+                    return self.export_excel_mainshareholders(main_shareholder_list)
 
-        return JsonResponse(({'content':main_shareholder_list}), status=200)
+            return JsonResponse(({'content':main_shareholder_list}), status=200)
+        except TypeError:
+            return JsonResponse(({'message':'TYPE_ERROR'}), status=400)
 
     def export_excel_mainshareholders(self, main_shareholder_list):
         response                        = HttpResponse(content_type="application/vnd.ms-excel")
@@ -586,9 +589,4 @@ class IncomeStatementView(View):
                 ws.write(row_num, col_num + len(verbose_col_names), content)
 
         wb.save(response)
-<<<<<<< HEAD
         return response
-=======
-        return response
-    
->>>>>>> main
