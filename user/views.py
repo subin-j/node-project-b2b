@@ -8,12 +8,13 @@ from json import JSONDecodeError
 
 from django.http  import JsonResponse, HttpResponse
 from django.views import View
+from django.db    import transaction
 
 from .models import User
 
 from my_settings      import SECRET_KEY, HASHING_ALGORITHM
 from utils.decorators import auth_check
-
+from utils.eng2kor    import engkor
 
 class SignUpView(View):
     def post(self, request):
@@ -80,11 +81,63 @@ class SignInView(View):
             return JsonResponse({'meesage': 'JSON_DECODE_ERROR'}, status=400)
 
 
-class EditProfileView(View):
-    pass
+class ProfileView(View):
+    def __init__(self):
+        super(ProfileView, self).__init__()
+        self.login_user = None
 
+    @transaction.atomic
+    @auth_check
+    def patch(self, request):
+        try:
+            data = json.loads(request.body)
 
-class DeleteAccountView(View):
+            new_password = data.get('new_password', '')
+            new_corporation_name = data.get('new_corporation_name', '')
+            self.login_user = request.user
+
+            if not new_password and not new_corporation_name:
+                return JsonResponse({'message': 'DATA_NOT_FILLED'}, status=400)
+
+            if new_password:
+                edit_password = self.edit_password(new_password)
+                if isinstance(edit_password, JsonResponse):
+                    transaction.set_rollback(True)
+                    return edit_password
+
+            if new_corporation_name:
+                edit_corporation_name = self.edit_corporation_name(new_corporation_name)
+                if isinstance(edit_corporation_name, JsonResponse):
+                    transaction.set_rollback(True)
+                    return edit_corporation_name
+
+            return JsonResponse({'message':'SUCCESS'}, status=201)
+
+        except KeyError:
+            return JsonResponse({'message':'KEY_ERROR'}, status=400)
+
+    def edit_password(self, new_password):
+        p_password = re.compile(r'^(?=.*[!-/:-@])(?!.*[ㄱ-ㅣ가-힣]).{8,20}$')
+        if not p_password.match(new_password):
+            return JsonResponse({'message': 'PASSWORD_FORM_IS_NOT_VALID'}, status=400)
+
+        password_check = bcrypt.checkpw(new_password.encode('utf-8'), self.login_user.password.encode('utf-8'))
+        if password_check:
+            return JsonResponse({'message':'SAME_PASSWORD'}, status=400)
+
+        hashed_password = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode('utf-8')
+        self.login_user.password = hashed_password
+        self.login_user.save()
+        return True
+    
+    def edit_corporation_name(self, new_corporation_name):
+        if new_corporation_name == self.login_user.corporation_name:
+            return JsonResponse({'message':'SAME_CORP_NAME'}, status=400)
+
+        self.login_user.corporation_name = new_corporation_name
+        self.login_user.save()
+        return True
+
     @auth_check
     def delete(self,request):
         try:
