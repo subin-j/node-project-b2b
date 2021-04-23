@@ -1,4 +1,6 @@
 import json
+import xlwt
+import datetime
 
 from django.http      import JsonResponse, HttpResponse
 from django.views     import View
@@ -21,46 +23,81 @@ class CorporationInfoView(View):
             cocode = request.GET.get('cocode')
             is_excel = request.GET.get('is_excel', '0')
 
-            corp_info_lists = Corporation.objects.filter(cocode=cocode).select_related(
-                'corporation_classification',
-                'accounting_month',
-                'industry_code',
-            ).prefetch_related(
-                'ceoname_set',
-            )
+            
+            corp_info = Corporation.objects.get(cocode=cocode)
+                        
+            corp_info_list = {
+                'cocode'        : corp_info.cocode,
+                'coname'        : corp_info.coname,      
+                'coname_eng'    : corp_info.coname_eng,
+                'stock_name'    : corp_info.stock_name,         
+                'ticker'        : corp_info.ticker,
+                'ceo_nm'        : [ceoname.name for ceoname in corp_info.ceoname_set.all()],    
+                'corp_cls'      : corp_info.corporation_classification.symbol_description,
+                'jurir_no'      : corp_info.jurir_no,
+                'bizr_no'       : corp_info.bizr_no,
+                'adres'         : corp_info.adres,
+                'hm_url'        : corp_info.hm_url,
+                'ir_url'        : corp_info.ir_url,
+                'phn_no'        : corp_info.phn_no,
+                'fax_no'        : corp_info.fax_no,
+                'industry_code' : corp_info.industry_code.code,
+                'est_dt'        : datetime.datetime.strftime(corp_info.est_dt, '%Y%m%d'),
+                'acc_mt'        : corp_info.accounting_month.month,
+            }
 
-            corp_info_lists = [{
-                'cocode'        : corp_info_list.cocode,
-                'coname'        : corp_info_list.coname,      
-                'coname_eng'    : corp_info_list.coname_eng,
-                'stock_name'    : corp_info_list.stock_name,         
-                'ticker'        : corp_info_list.ticker,
-                'ceo_nm'        : [ceoname.name for ceoname in corp_info_list.ceoname_set.all()],    
-                'corp_cls'      : corp_info_list.corporation_classification.symbol_description,
-                'jurir_no'      : corp_info_list.jurir_no,
-                'bizr_no'       : corp_info_list.bizr_no,
-                'adres'         : corp_info_list.adres,
-                'hm_url'        : corp_info_list.hm_url,
-                'ir_url'        : corp_info_list.ir_url,
-                'phn_no'        : corp_info_list.phn_no,
-                'fax_no'        : corp_info_list.fax_no,
-                'industry_code' : corp_info_list.industry_code.code,
-                'est_dt'        : corp_info_list.est_dt,
-                'acc_mt'        : corp_info_list.accounting_month.month,
-            } for corp_info_list in corp_info_lists]
-
-            if not corp_info_lists:
+            if not corp_info_list:
                 return JsonResponse({'message': 'COCODE_NOT_FOUND'}, status=404)
 
-            #if is_excel== '1':
-            #    return self.export_excel(corp_info_lists)
+            if int(is_excel) == 1:
+                return self.export_excel(corp_info_list)
 
-            return JsonResponse({'result' : corp_info_lists}, status=200)
+            return JsonResponse({'result' : corp_info_list}, status=200)
 
         except ValueError:
             return JsonResponse({"message":"VALUE_ERROR"},status=400)
         except KeyError:
             return JsonResponse({"message":"KEY_ERROR"},status=400)
+
+    def export_excel(self, output):
+        response = HttpResponse(content_type="application/vnd.ms-excel")
+        response["Content-Disposition"] = 'attachment; filename="corporation-infomation.xls"'
+        wb = xlwt.Workbook(encoding='utf-8')
+        ws = wb.add_sheet('corporation-infomation')
+
+        row_num = 0
+        col_names = [
+                    '회사고유번호',
+                    '회사명',
+                    '영문회사명',
+                    '주식이름',
+                    '종목코드',
+                    'CEO명',
+                    '회사구분',
+                    '사업자등록번호',
+                    '법인등록번호',
+                    '주소',
+                    '홈페이지주소',
+                    'IR주소',
+                    '전화번호',
+                    '팩스번호',
+                    '산업코드',
+                    '설립일',
+                    '결산월'
+        ]
+        for col_num, col_name in enumerate(col_names):
+            ws.write(row_num, col_num, col_name)
+
+        row_num = 1
+        for col_num, key in enumerate(output):
+            if key == 'ceo_nm':
+                content = ','.join(output[key])
+            else:    
+                content = output[key]
+            ws.write(row_num, col_num, content)
+      
+        wb.save(response)
+        return response
 
 class CorporationSearchView(View):
     def get(self, request):
