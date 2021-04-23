@@ -8,10 +8,8 @@ decorator==5.0.7
 Django==3.2
 django-cors-headers==3.7.0
 et-xmlfile==1.0.1
-hangul-utils==0.2
 idna==2.10
-ipython==7.22.0
-ipython-genutils==0.2.0
+hangul-utils==0.2
 jedi==0.18.0
 numpy==1.20.2
 openpyxl==3.0.7
@@ -21,6 +19,7 @@ pexpect==4.8.0
 pickleshare==0.7.5
 prompt-toolkit==3.0.18
 psycopg2==2.8.6
+psycopg2-binary==2.8.6
 ptyprocess==0.7.0
 pycparser==2.20
 Pygments==2.8.1
@@ -31,6 +30,7 @@ requests==2.25.1
 rope==0.19.0
 six==1.15.0
 sqlparse==0.4.1
+sudo==1.0.0
 traitlets==5.0.5
 urllib3==1.26.4
 wcwidth==0.2.5
