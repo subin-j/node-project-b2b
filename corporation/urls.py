@@ -1,7 +1,7 @@
 from django.urls import path
 
-from .views import HolderSharesView
+from .views import MainShareHoldersView
 
 urlpatterns = [
-    path('/shareholders',HolderSharesView.as_view()),
+    path('/main-shareholders',MainShareHoldersView.as_view()),
 ]
