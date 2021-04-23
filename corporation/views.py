@@ -26,9 +26,9 @@ CURRENCY_UNITS = {
                 'mil'  : 10 ** 6
             }
 
-class MainShareHoldersView(View):
-    def get(self,request):
 
+class MainShareHoldersView(View):
+    def get(self, request):
         cocode     = request.GET.get('cocode', '')
         stock_type = int(request.GET.get('stock_type', ''))
         is_excel   = int(request.GET.get('is_excel', ''))
@@ -36,7 +36,7 @@ class MainShareHoldersView(View):
         corporation = Corporation.objects.get(cocode=cocode)
 
         if stock_type not in [1, 2]: 
-            return JsonResponse({'message':'ERROR_STOCK_TYPE_NOT_BOUND'},status=400)
+            return JsonResponse({'message':'ERROR_STOCK_TYPE_NOT_BOUND'}, status=400)
         
         holders = MainShareholder.objects.filter(corporation=corporation, stock_type=stock_type).select_related('stock_type')
         main_shareholder_list = [
@@ -70,7 +70,6 @@ class MainShareHoldersView(View):
         
         row_start_num = 1
         for row_num, main_shareholder in enumerate(main_shareholder_list):
-            
             for col_num, key in enumerate(main_shareholder):
                 val = main_shareholder[key]
                 ws.write(row_num + row_start_num, col_num, val)
