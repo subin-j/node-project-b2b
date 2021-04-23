@@ -409,7 +409,7 @@ class IncomeStatementView(View):
         
         # 두번째 row 부터 데이터 추가
         for row in data:
-            row_num +=1
+            row_num += 1
             for col_num, key in enumerate(row):
                 content = row[key]
                 ws.write(row_num, col_num + len(verbose_col_names), content)
@@ -430,17 +430,23 @@ class CorpExcelExporter(View):
 
             wb = xlwt.Workbook(encoding='utf-8')
 
-            responses = [requests.get(url) for url in urls if requests.get(url).status_code == 200]
-            if not responses:
-                return JsonResponse({'message': 'INVALID_URL'}, status=400)
+            responses = list()
+            for url in urls:
+                res = requests.get(url)
+                if res.status_code != 200:
+                    return JsonResponse({'message': 'URL_REQUEST_PROCESS_ERROR : {}'.format(url)}, status=400)
+                responses.append(res)
 
-            data_frames = [
-                (
-                    pandas.read_excel(response.content),
-                    pandas.ExcelFile(response.content).sheet_names[0]
-                )
-                for response in responses]
-
+            data_frames = list()
+            for response in responses:
+                sheet_names = pandas.ExcelFile(response.content).sheet_names
+                for sheet_name in sheet_names:
+                    df = (
+                        pandas.read_excel(response.content, sheet_name=sheet_name),
+                        sheet_name 
+                        )
+                    data_frames.append(df)
+            
             with BytesIO() as b:
                 writer = pandas.ExcelWriter(b, engine='xlsxwriter')
 

@@ -32,7 +32,6 @@ class ExcelUrlType(ExtendedEnum):
     main_shareholders = '/corporation/main-shareholders'
 
 
-
 def handle_income_statement_input_error(statement_type, display, unit, start, end, is_excel):
     if statement_type not in StatementType.__members__:
         return JsonResponse({'message': 'STATEMENT_TYPE_ERROR'}, status=400)
@@ -48,7 +47,6 @@ def handle_income_statement_input_error(statement_type, display, unit, start, en
 
     if is_excel not in ['0', '1']:
         return JsonResponse({'message': "IS_EXCEL_TYPE_ERROR"}, status=400)
-
     return True
 
 
@@ -66,5 +64,4 @@ def handle_excel_exporter_input_error(server_host, urls):
         
         if server_host != requested_host or url_path not in ExcelUrlType.list():
             return JsonResponse({'message': 'INVALID_URL'}, status=400)
-
     return True
