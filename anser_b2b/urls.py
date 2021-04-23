@@ -2,5 +2,5 @@ from django.urls import path,include
 
 urlpatterns = [
     path('user', include('user.urls')),
-    path('corporation', include('corporation.urls')),
+    path('corporation', include('corporation.urls'))
 ]
