@@ -3,5 +3,6 @@ from django.urls import path
 from .views import MainShareHoldersView
 
 urlpatterns = [
-    path('/main-shareholders',MainShareHoldersView.as_view()),
+    path('/main-shareholders', MainShareHoldersView.as_view()),
+    path('/income-statement', IncomeStatementView.as_view()),
 ]

@@ -48,6 +48,7 @@ def push_corporation_csv():
                                                 ir_url                     = row.ir_url,
                                                 phn_no                     = row.phn_no,
                                                 fax_no                     = row.fax_no,
+                                                is_financial_corporation   = row.is_financial_corporation,
                                                 est_dt                     = established_date,
                                                 accounting_month           = accounting_month,
                                                 corporation_classification = corporation_classification,
@@ -76,6 +77,8 @@ def push_income_statement_csv():
             ebit_con       = row.ebit_con,
             ni_con         = row.ni_con,
             ni_control_con = row.ni_control_con,
+            asset_con      = row.asset_con,
+            asset_ind      = row.asset_ind,
             corporation    = corporation,
             currency_unit  = currency_unit
         )
