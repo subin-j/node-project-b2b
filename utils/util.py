@@ -54,9 +54,6 @@ def handle_excel_exporter_input_error(server_host, urls):
     if not urls:
         return JsonResponse({'message': 'URL_NOT_GIVEN'}, status=400)
     
-    if len(urls) > len(ExcelUrlType):
-        return JsonResponse({'message': 'URL_INPUT_EXCEEDED_MAX_LIMIT'}, status=400)
-
     for url in urls:
         parsed_url     = urlparse(url)
         requested_host = parsed_url.netloc

@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import xlwt
 import requests
@@ -79,15 +80,16 @@ class CorporationInfoView(View):
             return JsonResponse({'result' : corp_info_list}, status=200)
 
         except ValueError:
-            return JsonResponse({"message":"VALUE_ERROR"},status=400)
+            return JsonResponse({"message":"VALUE_ERROR"}, status=400)
         except KeyError:
             return JsonResponse({"message":"KEY_ERROR"},status=400)
 
     def export_excel(self, output):
         response                        = HttpResponse(content_type="application/vnd.ms-excel")
         response["Content-Disposition"] = 'attachment; filename="corporation-infomation.xls"'
-        wb                              = xlwt.Workbook(encoding='utf-8')
-        ws                              = wb.add_sheet('corporation-infomation')
+
+        wb = xlwt.Workbook(encoding='utf-8')
+        ws = wb.add_sheet('기업기본정보')
 
         row_num   = 0
         col_names = [
@@ -195,15 +197,17 @@ class MainShareHoldersView(View):
         response                        = HttpResponse(content_type="application/vnd.ms-excel")
         response["Content-Disposition"] = 'attachment; filename="main-shareholders.xls"'
 
+        stock_type = main_shareholder_list[0]['stock_type']
+
         wb = xlwt.Workbook(encoding='utf-8')
-        ws = wb.add_sheet('main-shareholders')
+        ws = wb.add_sheet('{} 최대주주현황'.format(stock_type))
 
         row_num   = 0
         col_names = [
-                            '주주명',
-                            '지분(%)',
-                            '우선주/보통주'
-                        ]
+                    '주주명',
+                    '지분(%)',
+                    '우선주/보통주'
+                ]
 
         for col_num, col_name in enumerate(col_names):
             ws.write(row_num, col_num, col_name)
@@ -408,6 +412,8 @@ class IncomeStatementView(View):
             return JsonResponse({'message': 'CORPORATION_DOES_NOT_EXIST'}, status=404)
         except TypeError:
             return JsonResponse({'message': 'TYPE_ERROR'}, status=400)
+        except ValueError:
+            return JsonResponse({'message': 'VALUE_ERROR'}, status=400)
 
     def _get_cagr(self, start_year_val, end_year_val, years_between):
         start_year_val = float(start_year_val)
@@ -546,8 +552,10 @@ class IncomeStatementView(View):
         response = HttpResponse(content_type="application/vnd.ms-excel")
         response["Content-Disposition"] = 'attachment; filename="income-statement.xls"'
 
+        statement_type = '연결' if output['type'] == 'con' else '개별' 
+
         wb = xlwt.Workbook(encoding='utf-8')
-        ws = wb.add_sheet('income-statement')
+        ws = wb.add_sheet('{} 손익계산서'.format(statement_type))
 
         data = output['data']
 
@@ -605,23 +613,31 @@ class IncomeStatementView(View):
     
 
 class CorpExcelExporter(View):
+    async def get_excel_response(self, url, loop):
+        response = await loop.run_in_executor(None, requests.get, url)
+        return response
+    
+    async def main(self, urls, loop):
+        futures = [asyncio.ensure_future(self.get_excel_response(url, loop)) for url in urls]
+        responses = await asyncio.gather(*futures)
+        return responses
+
     def get(self, request):
         try:
-            urls        = request.GET.getlist('url')
+            urls        = list(set(request.GET.getlist('url')))
             server_host = request.get_host()
 
             error_handler_res = handle_excel_exporter_input_error(server_host, urls)
             if isinstance(error_handler_res, JsonResponse):
                 return error_handler_res
 
-            wb = xlwt.Workbook(encoding='utf-8')
+            loop      = asyncio.new_event_loop()
+            responses = loop.run_until_complete(self.main(urls, loop))
+            loop.close()
 
-            responses = list()
-            for url in urls:
-                res = requests.get(url)
+            for res in responses:
                 if res.status_code != 200:
-                    return JsonResponse({'message': 'URL_REQUEST_PROCESS_ERROR : {}'.format(url)}, status=400)
-                responses.append(res)
+                    return JsonResponse({'message': 'URL_REQUEST_PROCESS_ERROR'}, status=400)
 
             data_frames = list()
             for response in responses:
