@@ -4,16 +4,17 @@ from celery.signals import celeryd_init
 
 import threading
 import time
-
+import queue
 
 class StockAgentsManger(threading.Thread):
-    def __init__(self, queue):
+    def __init__(self):
         super(StockAgentsManger, self).__init__()
         self.daemon        = True
         self.stock_agents  = dict()
-        self.queue         = queue
         self.stop_flag     = threading.Event()
         self.channels_lock = threading.Lock()
+        self.queue = queue.Queue()
+        self.receive_flag = False
 
     def add_stock_price_agent(self, channel, ticker_group):
         agent = self.stock_agents.get(ticker_group, None)
@@ -29,6 +30,9 @@ class StockAgentsManger(threading.Thread):
     def stop(self):
         self.stop_flag.set()
     
+    def put_channel_info(self, channel, ticker_group):
+        queue.put(channel, ticker_group)
+
     def run(self):
         while not self.stop_flag.is_set():
             time.sleep(5)
@@ -50,7 +54,12 @@ class StockPriceCrawlerAgent(threading.Thread):
             self.channels.remove(channel)
 
 
+stock_agents_manager = StockAgentsManger()
+
 @shared_task
 def run_manager_thread():
-    stock_agents_manager = StockAgentsManger(manager_queue)
     stock_agents_manager.start()
+
+@shared_task
+def put_channel_info(channel, ticker_group):
+    stock_agents_manager.put_channel_info(channel, ticker_group)

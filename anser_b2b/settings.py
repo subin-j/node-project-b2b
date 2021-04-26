@@ -5,6 +5,8 @@ from my_settings import (
     CELERY_BROKER_URL, CELERY_RESULT_BACKEND
     )
 
+from stock.tasks import run_manager_thread
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -131,3 +133,5 @@ CELERY_ACCEPT_CONTENT    = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER   = 'json'
 CELERY_TIMEZONE          = 'Asia/Seoul'
+
+run_manager_thread.delay()
