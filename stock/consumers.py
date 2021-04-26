@@ -1,10 +1,15 @@
 import json
 
+from .tasks import run_manager_thread
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
 
 
 class StockConsumer(WebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super(StockConsumer, self).__init__(*args, **kwargs)
+        self.manager_queue = manager_queue
+
     def connect(self):
         self.ticker            = self.scope['url_route']['kwargs']['ticker']
         self.ticker_group_name = 'ticker_{}'.format(self.ticker)
@@ -13,6 +18,7 @@ class StockConsumer(WebsocketConsumer):
             self.ticker_group_name,
             self.channel_name
         )
+
 
         self.accept()
 
@@ -23,6 +29,7 @@ class StockConsumer(WebsocketConsumer):
         )
 
     def receive(self, text_data):
+        run_manager_thread('queue')
         async_to_sync(self.channel_layer.group_send)(
             self.ticker_group_name,
              {

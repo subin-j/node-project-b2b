@@ -1,6 +1,9 @@
 from pathlib import Path
 
-from my_settings import SECRET_KEY, DATABASES, CHANNEL_LAYERS
+from my_settings import (
+    SECRET_KEY, DATABASES, CHANNEL_LAYERS,
+    CELERY_BROKER_URL, CELERY_RESULT_BACKEND
+    )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,6 +24,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_celery_beat',
+    'django_celery_results',
     'corsheaders',
     'user',
     'corporation',
@@ -119,3 +124,10 @@ CORS_ALLOW_HEADERS = (
 )
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
+CELERY_BROKER_URL        = CELERY_BROKER_URL
+CELERY_RESULT_BACKEND    = CELERY_RESULT_BACKEND
+CELERY_ACCEPT_CONTENT    = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER   = 'json'
+CELERY_TIMEZONE          = 'Asia/Seoul'
