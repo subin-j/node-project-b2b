@@ -10,7 +10,7 @@ from django.http  import JsonResponse, HttpResponse
 from django.views import View
 from django.db    import transaction
 
-from .models import User
+from .models import User,GridLayout
 
 from my_settings      import SECRET_KEY, HASHING_ALGORITHM
 from utils.decorators import auth_check
@@ -148,3 +148,23 @@ class ProfileView(View):
 
         except KeyError:
             return JsonResponse({'message': 'KEY_ERROR'}, status=400)
+
+
+class GridLayoutView(View):
+    @auth_check
+    def get(self,request):
+        user_id = request.user.id
+        grid_layout = GridLayout.objects.get(user_id=user_id)
+
+        if grid_layout:
+            output =[{
+                'x': grid_layout.x,
+                'y': grid_layout.y,
+                'w': grid_layout.w,
+                'h': grid_layout.h,
+                'is_draggable': grid_layout.is_draggable 
+            }]
+            return JsonResponse({'output':output},status=200)
+
+        if not grid_layout:
+            return JsonResponse({'output':'default'},status=200)
