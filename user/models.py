@@ -11,14 +11,15 @@ class User(models.Model):
         db_table = 'users'
 
 class GridLayout(models.Model):
-    id           = models.CharField(max_length=100, primary_key=True)
     x            = models.IntegerField()
     y            = models.IntegerField()
     w            = models.IntegerField()
     h            = models.IntegerField()
     is_draggable = models.BooleanField(default=True)
-    user_id      = models.ForeignKey('User', on_delete=models.CASCADE)
+    grid_id      = models.CharField(max_length=100)
+    user         = models.ForeignKey('User', on_delete=models.CASCADE)
     
     class Meta:
         db_table = 'grid_layouts'
+        unique_together = ('user_id', 'grid_id')
 
