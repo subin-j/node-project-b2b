@@ -1,5 +1,6 @@
 from pathlib import Path
-from my_settings import SECRET_KEY, DATABASES
+
+from my_settings import SECRET_KEY, DATABASES, CHANNEL_LAYERS
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -59,6 +60,8 @@ WSGI_APPLICATION = 'anser_b2b.wsgi.application'
 
 # for websocket ASGI protocol
 ASGI_APPLICATION = 'anser_b2b.routing.application'
+
+CHANNEL_LAYERS = CHANNEL_LAYERS
 
 DATABASES = DATABASES
 
