@@ -103,6 +103,9 @@ class ConglomerateCorporation(models.Model):
     conglomerate = models.ForeignKey('Conglomerate', on_delete=models.CASCADE)
     corporation  = models.ForeignKey('Corporation', on_delete=models.CASCADE)
 
+    class Meta:
+        db_table = 'conglomerates_corporations'
+
 
 class Conglomerate(models.Model):
     designate         = models.DateField(null=True)
@@ -131,7 +134,7 @@ class ConglomerateType(models.Model):
 
 class Ticker(models.Model):
     code        = models.CharField(max_length=50, unique=True)
-    name        = models.CharField(max_length=50)
+    stock_name  = models.CharField(max_length=50)
     corporation = models.ForeignKey('Corporation', on_delete=models.CASCADE)
 
     class Meta:
@@ -149,3 +152,5 @@ class StockPrice(models.Model):
 
     class Meta:
         db_table = 'stock_prices'
+
+# date, ticker unique_together

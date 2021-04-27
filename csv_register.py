@@ -18,13 +18,17 @@ from corporation.models import (
                                 StockType, IncomeStatement,
                                 CurrencyUnit, Conglomerate,
                                 ConglomerateType, Ticker,
-                                StockPrice
+                                StockPrice, ConglomerateCorporation
                                 )
 
-corporation_df      = pd.read_csv('기업정보.csv', dtype=str)
-income_statment_df  = pd.read_csv('손익계산서.csv', dtype=str)
-main_shareholder_df = pd.read_csv('최대주주.csv', dtype=str)
-conglomerate_df = pd.read_csv('기업집단.csv', dtype=str)
+corporation_df              = pd.read_csv('기업정보.csv', dtype=str)
+income_statment_df          = pd.read_csv('손익계산서.csv', dtype=str)
+main_shareholder_df         = pd.read_csv('최대주주.csv', dtype=str)
+conglomerate_df             = pd.read_csv('기업집단.csv', dtype=str)
+conglomerate_corporation_df = pd.read_csv('어느회사가어느기업집단인지.csv', dtype=str)
+ticker_df                   = pd.read_csv('보통주우선주.csv', dtype=str)
+stock_price_df              = pd.read_csv('주식가격_우선주포함.csv', dtype=str)
+
 
 
 # columns = corporation_df.columns.tolist()
@@ -106,14 +110,16 @@ def push_main_shareholder_csv():
             stock_type                = stock_type
         )
 
-@transaction.atomic
+
 def push_conglomerate_csv():
     for row in conglomerate_df.itertuples():
         currency_unit     = CurrencyUnit.objects.get(name=row.unit)
         conglomerate_type = ConglomerateType.objects.get(id=row.type)
 
+        designate_date = datetime.datetime.strptime(row.designate, '%Y%m')
+        
         Conglomerate.objects.get_or_create(
-            designate         = row.designate,
+            designate         = designate_date,
             conglomerate      = row.conglomerate,
             tycoon            = row.tycoon,
             nfirms            = row.nfirms,
@@ -128,11 +134,60 @@ def push_conglomerate_csv():
         )
 
 
+def push_conglomerate_corporation_csv():
+    for row in conglomerate_corporation_df.itertuples():
+        conglomerate = Conglomerate.objects.get(gcode=row.gcode)
+        corporation  = Corporation.objects.get(cocode=row.cocode)
+
+        ConglomerateCorporation.objects.get_or_create(
+            conglomerate = conglomerate,
+            corporation  = corporation
+        )
+
+
+def push_ticker_csv():
+    for row in ticker_df.itertuples():
+        corporation = Corporation.objects.get(cocode=row.cocode)
+
+        Ticker.objects.get_or_create(
+            stock_name  = row.stock_name,
+            code        = row.ticker,
+            corporation = corporation
+        )
+
+
+def push_stock_price_csv():
+    stock_price_entries = list()
+
+    for row in stock_price_df.itertuples():
+        ticker = Ticker.objects.get(code=row.ticker)
+        date   = datetime.datetime.strptime(row.date, '%Y-%m-%d')
+
+        stock_price_entries.append(
+            StockPrice(
+                        ticker   = ticker,
+                        date     = date,
+                        volume   = int(float(row.volume)),
+                        bprc_adj = row.bprc_adj,
+                        hi_adj   = row.hi_adj,
+                        lo_adj   = row.lo_adj,
+                        prc_adj  = row.prc_adj
+                        )
+                    )
+
+    StockPrice.objects.bulk_create(
+        stock_price_entries
+    )
+
+
 csv_list = [
     push_corporation_csv,
     push_income_statement_csv,
     push_main_shareholder_csv,
-    push_conglomerate_csv
+    push_conglomerate_csv,
+    push_conglomerate_corporation_csv,
+    push_ticker_csv,
+    push_stock_price_csv
 ]
 
 
