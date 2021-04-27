@@ -16,12 +16,16 @@ from corporation.models import (
                                 CeoName, AccountingMonth,
                                 IndustryCode, MainShareholder,
                                 StockType, IncomeStatement,
-                                CurrencyUnit
+                                CurrencyUnit, Conglomerate,
+                                ConglomerateType, Ticker,
+                                StockPrice
                                 )
 
 corporation_df      = pd.read_csv('기업정보.csv', dtype=str)
 income_statment_df  = pd.read_csv('손익계산서.csv', dtype=str)
 main_shareholder_df = pd.read_csv('최대주주.csv', dtype=str)
+conglomerate_df = pd.read_csv('기업집단.csv', dtype=str)
+
 
 # columns = corporation_df.columns.tolist()
 
@@ -101,6 +105,25 @@ def push_main_shareholder_csv():
             corporation               = corporation,
             stock_type                = stock_type
         )
+
+@transaction.atomic
+def push_conglomerate_csv():
+    for row in conglomerate_df.itertuples():
+        Conglomerate.objects.get_or_create(
+            designate = row.designate,
+            conglomerate = row.conglomerate,
+            tycoon = row.tycoon,
+            nfirms = row.nfirms,
+            nfirms_public = row.nfirms_public,
+            at_regular
+            teq
+            sale
+            ni
+            gcode
+            currency_unit
+            conglomerate_type
+        )
+
 
 
 if __name__ == '__main__':
