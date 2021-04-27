@@ -109,24 +109,37 @@ def push_main_shareholder_csv():
 @transaction.atomic
 def push_conglomerate_csv():
     for row in conglomerate_df.itertuples():
+        currency_unit     = CurrencyUnit.objects.get(name=row.unit)
+        conglomerate_type = ConglomerateType.objects.get(id=row.type)
+
         Conglomerate.objects.get_or_create(
-            designate = row.designate,
-            conglomerate = row.conglomerate,
-            tycoon = row.tycoon,
-            nfirms = row.nfirms,
-            nfirms_public = row.nfirms_public,
-            at_regular
-            teq
-            sale
-            ni
-            gcode
-            currency_unit
-            conglomerate_type
+            designate         = row.designate,
+            conglomerate      = row.conglomerate,
+            tycoon            = row.tycoon,
+            nfirms            = row.nfirms,
+            nfirms_public     = row.nfirms_public,
+            at_regular        = row.at_regular,
+            teq               = row.teq,
+            sale              = row.sale,
+            ni                = row.ni,
+            gcode             = row.gcode,
+            currency_unit     = currency_unit,
+            conglomerate_type = conglomerate_type
         )
 
 
+csv_list = [
+    push_corporation_csv,
+    push_income_statement_csv,
+    push_main_shareholder_csv,
+    push_conglomerate_csv
+]
+
 
 if __name__ == '__main__':
-    push_corporation_csv()
-    push_income_statement_csv()
-    push_main_shareholder_csv()
+    run_num = int(input('마지막으로 다운받은 파일의 다음번호를 입력하세요: '))
+
+    run_csv_list = csv_list[(run_num - 1):]
+    for csv in run_csv_list:
+        csv()
+    

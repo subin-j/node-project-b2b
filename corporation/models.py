@@ -19,7 +19,7 @@ class Corporation(models.Model):
     accounting_month           = models.ForeignKey('AccountingMonth', on_delete=models.RESTRICT)
     corporation_classification = models.ForeignKey('CorporationClassification', on_delete=models.RESTRICT)
     industry_code              = models.ForeignKey('IndustryCode', on_delete=models.RESTRICT)
-    conglomerate               = models.ForeignKey('Conglomerate', on_delete=models.RESTRICT, null=True)
+    conglomerate               = models.ManyToManyField('Conglomerate', through='ConglomerateCorporation')
 
     class Meta:
         db_table = 'corporations'
@@ -97,6 +97,11 @@ class CurrencyUnit(models.Model):
 
     class Meta:
         db_table = 'currency_units'
+
+
+class ConglomerateCorporation(models.Model):
+    conglomerate = models.ForeignKey('Conglomerate', on_delete=models.CASCADE)
+    corporation  = models.ForeignKey('Corporation', on_delete=models.CASCADE)
 
 
 class Conglomerate(models.Model):
