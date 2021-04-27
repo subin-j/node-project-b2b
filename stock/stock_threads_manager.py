@@ -1,9 +1,16 @@
 import threading
 import time
+import datetime
+
 from stock.stock_price_crawler import get_current_price
+from channels.layers           import get_channel_layer
+from asgiref.sync              import async_to_sync
+
+from utils.debugger import debugger
 
 
 SUICIDE_TIME = 5
+PRICE_PUSH_CYCLE = 5
 
 
 class StockAgentsManger(threading.Thread):
@@ -21,9 +28,11 @@ class StockAgentsManger(threading.Thread):
             agent = StockPriceCrawlerAgent(ticker_group, self.stop_flag, self.channels_lock)
             agent.start()
             self.stock_agents[ticker_group] = agent
+
+            debugger.info('starting thread : {}'.format(agent))
         agent.add_channel(channel)
 
-    def remove_stock_price_agent(self, channel, ticker_group):
+    def remove_stock_price_agent(self, ticker_group, channel):
         self.stock_agents[ticker_group].remove_channel(channel)
     
     def stop(self):
@@ -36,18 +45,18 @@ class StockAgentsManger(threading.Thread):
                 self.add_stock_price_agent(user_conn.ticker_group, user_conn.channel)
             else:
                 self.remove_stock_price_agent(user_conn.ticker_group, user_conn.channel)
-            print(self.stock_agents)
 
 
 class StockPriceCrawlerAgent(threading.Thread):
     def __init__(self, ticker_group, stop_flag, channels_lock):
         super(StockPriceCrawlerAgent, self).__init__(name=ticker_group)
         self.ticker_group  = ticker_group
-        self.stock_code    = ticker_group.split('_')[-1]
+        self.ticker        = ticker_group.split('_')[-1]
         self.channels      = list()
         self.channels_lock = channels_lock
+        self.channel_layer = get_channel_layer()
+
         self.stop_flag     = stop_flag
-        
         self.suicide_time = None
 
     def add_channel(self, channel):
@@ -76,6 +85,23 @@ class StockPriceCrawlerAgent(threading.Thread):
                 else:
                     if time.time() > self.suicide_time + SUICIDE_TIME:
                         break
-            print(self.stock_code)
-            stock_price = get_current_price(self.stock_code)
-            print(stock_price)
+
+            current_price, open_price = get_current_price(self.ticker)     
+            
+            change_rate  = (current_price - open_price) / open_price * 100
+            current_time = str(datetime.datetime.now())
+
+            async_to_sync(self.channel_layer.group_send)(
+                self.ticker_group,
+                {
+                    'type'         : 'push_current_price',
+                    'ticker'       : self.ticker,
+                    'current_price': current_price,
+                    'current_time' : current_time,
+                    'change_rate'  : change_rate
+                }
+            )
+
+            if not self.is_empty():
+                time.sleep(PRICE_PUSH_CYCLE)
+        debugger.info('Breaking Thread : {}'.format(self))

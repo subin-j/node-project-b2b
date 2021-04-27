@@ -28,4 +28,6 @@ def get_current_price(stock_symbol):
     current_price_dict = json.loads(current_price_raw)
 
     current_price = current_price_dict['recent'][0]['close']
-    return current_price
+    open_price = current_price_dict['recent'][0]['open']
+
+    return current_price, open_price

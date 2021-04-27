@@ -127,7 +127,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 from stock.stock_threads_manager import StockAgentsManger
 import queue
 import threading
-import psutil
 
 manager_queue = queue.Queue()
 

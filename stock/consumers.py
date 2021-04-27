@@ -40,19 +40,15 @@ class StockConsumer(WebsocketConsumer):
         user_conn = UserConnection(False, self.ticker_group_name, self.channel_name)
         self.queue.put(user_conn)
 
-    def receive(self, text_data):
-        async_to_sync(self.channel_layer.group_send)(
-            self.ticker_group_name,
-             {
-                'type': 'push_stock_price',
-                'stock_price': text_data
-            }
-        )
+    def push_current_price(self, event):
+        current_price = event['current_price']
+        ticker        = event['ticker']
+        current_time  = event['current_time']
+        change_rate   = event['change_rate']
 
-    def push_stock_price(self, event):
-        stock_price = event['stock_price']
-
-        # Send message to WebSocket
         self.send(text_data=json.dumps({
-            'stock_price': stock_price
+            'current_price': current_price,
+            'ticker'       : ticker,
+            'current_time' : current_time,
+            'change_rate'  : change_rate
         }))
