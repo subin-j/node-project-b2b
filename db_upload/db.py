@@ -11,9 +11,9 @@ django.setup()
 
 from corporation.models import (
                                 CorporationClassification, AccountingMonth,
-                                StockType, CurrencyUnit
+                                StockType, CurrencyUnit,
+                                ConglomerateType
                                 )
-
 CORP_CLS_SET = [
     ('Y', '코스피'),
     ('K', '코스닥'),
@@ -25,6 +25,7 @@ STOCK_TYPE_SET = ['우선주', '보통주']
 
 CURRENCY_UNIT_SET = ['원', '천원', '만원', '백만원', '천만원', '일억원', '1조원']
 
+CONGLOMERATE_TYPE_SET=['출자총액제한','상호출자제한','공시대상기업']
 
 for month in range(1, 13):
     AccountingMonth.objects.get_or_create(id=month, month=month)
@@ -38,3 +39,6 @@ for stock_type in STOCK_TYPE_SET:
 
 for currency_unit in CURRENCY_UNIT_SET:
     CurrencyUnit.objects.get_or_create(name=currency_unit)
+    
+for conglomerate_type in CONGLOMERATE_TYPE_SET:
+    ConglomerateType.objects.get_or_create(name=conglomerate_type)
