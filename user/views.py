@@ -151,30 +151,53 @@ class ProfileView(View):
 
 class GridLayoutView(View):
     @auth_check
-    def post(self, request):
-        
-        data = json.loads(request.body)
-        user = request.user
-        
-        id = data['id']
-        x = data['x']
-        print(x)
-        y = data['y']
-        print(y)
-        w = data['w']
-        print(w)
-        h = data['h']
-        print(h)
-        is_draggable = data.get('is_draggable', True)
-        print(is_draggable)
+    def put(self, request):
+        try:
+            data = json.loads(request.body)
+            user_id = request.user.id
 
-        GridLayout.objects.create(
-                id = id,
-                x = x,
-                y = y,
-                w = w,
-                h = h,
-                is_draggable = is_draggable,
-                user_id = user
-                )
-        return JsonResponse({'messge': 'ok'})
+            new_layouts = data['newLayout']
+            for layout in new_layouts:
+                
+                grid_id      = layout['id']
+                x            = layout['x']
+                y            = layout['y']
+                w            = layout['w']
+                h            = layout['h']
+                is_draggable = layout.get('isDraggable', True)
+
+                # id='0'인 카드의 is_draggable이 true로 들어오면 에러 리턴  
+                if grid_id == '0' and is_draggable == True:
+                    return JsonResponse({'message':'NOT_VALID'}, status=400)
+
+                grid_layout = GridLayout.objects.filter(grid_id=grid_id, user_id=user_id)
+
+                if grid_layout.exists():
+                    grid_layout.update(
+                        x            = x,
+                        y            = y,
+                        w            = w,
+                        h            = h,
+                        is_draggable = is_draggable
+                    )
+                else: 
+                    GridLayout.objects.create(
+                        grid_id      = grid_id,
+                        user_id      = user_id,
+                        x            = x,
+                        y            = y,
+                        w            = w,
+                        h            = h,
+                        is_draggable = is_draggable
+                        )
+            return JsonResponse({'messge': 'SUCCESS'}, status=201)
+   
+        except ValueError:
+            return JsonResponse({"message":"VALUE_ERROR"}, status=400)
+        except KeyError:
+            return JsonResponse({'message': 'KEY_ERROR'}, status=400)
+        except JSONDecodeError:
+            return JsonResponse({'meesage': 'JSON_DECODE_ERROR'}, status=400)
+        except IntegrityError:
+            return JsonResponse({'message': 'INTEGRITY_ERROR'}, status=400)
+        
