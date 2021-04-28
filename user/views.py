@@ -10,7 +10,7 @@ from django.http  import JsonResponse, HttpResponse
 from django.views import View
 from django.db    import transaction
 
-from .models import User,GridLayout
+from .models import User, GridLayout
 
 from my_settings      import SECRET_KEY, HASHING_ALGORITHM
 from utils.decorators import auth_check
@@ -139,10 +139,10 @@ class ProfileView(View):
         return True
 
     @auth_check
-    def delete(self,request):
+    def delete(self, request):
         try:
             user_id = request.user.id
-            user = User.objects.get(id= user_id)
+            user    = User.objects.get(id= user_id)
             user.delete()
             return HttpResponse(status=204)
 
@@ -152,47 +152,21 @@ class ProfileView(View):
 
 class GridLayoutView(View):
     @auth_check
-    def get(self,request):
+    def get(self, request):
         user_id = request.user.id
         grid_layouts = GridLayout.objects.filter(user_id=user_id)
 
         if grid_layouts:
-            output =[{
+            layout =[
+                {
                 'id':grid_layout.grid_id,
                 'x': grid_layout.x,
                 'y': grid_layout.y,
                 'w': grid_layout.w,
                 'h': grid_layout.h,
                 'is_draggable': grid_layout.is_draggable 
-            }for grid_layout in grid_layouts]
-            return JsonResponse({'layout':output},status=200)
+            } for grid_layout in grid_layouts]
+            return JsonResponse({'layout': layout}, status=200)
 
         if not grid_layouts:
-            return JsonResponse({'output':'default'},status=200)
-
-    # @auth_check
-    # def post(self, request):
-    #     data = json.loads(request.body)
-    #     user_id = request.user.id
-    #     print(user_id)
-    #     id = data['id']
-    #     x = data['x']
-    #     print(x)
-    #     y = data['y']
-    #     print(y)
-    #     w = data['w']
-    #     print(w)
-    #     h = data['h']
-    #     print(h)
-    #     is_draggable = data.get('is_draggable', True)
-    #     print(is_draggable)
-    #     GridLayout.objects.create(
-    #             grid_id = id,
-    #             x = x,
-    #             y = y,
-    #             w = w,
-    #             h = h,
-    #             is_draggable = is_draggable,
-    #             user_id = user_id
-    #             )
-    #     return JsonResponse({'messge': 'ok'})
+            return JsonResponse({'layout': 'default'}, status=200)
