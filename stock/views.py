@@ -5,3 +5,7 @@ from django.views import View
 class StockPriceView(View):
     def get(self, request):
         return render(request, 'stock/index.html', {})
+
+
+class StockCandleChart(View):
+    def get(self, request):
