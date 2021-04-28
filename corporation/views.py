@@ -684,9 +684,8 @@ class ConglomerateListView(View):
             cocode       = request.GET.get('cocode')
             conglomerate = Corporation.objects.get(cocode=cocode).conglomerate.all().first()
             
-            if not conglomerate.exists():
-                conglomerate_list = {}
-                return JsonResponse({'result': conglomerate_list}, status=200)
+            if not conglomerate:
+                return JsonResponse({'result': {}}, status=200)
             
             conglomerate_list = {
                 'designate'     : conglomerate.designate.strftime('%Y%m'), 
