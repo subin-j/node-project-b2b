@@ -139,17 +139,38 @@ class ProfileView(View):
         return True
 
     @auth_check
-    def delete(self,request):
+    def delete(self, request):
         try:
             user_id = request.user.id
-            user = User.objects.get(id= user_id)
+            user    = User.objects.get(id= user_id)
             user.delete()
             return HttpResponse(status=204)
 
         except KeyError:
             return JsonResponse({'message': 'KEY_ERROR'}, status=400)
 
+
 class GridLayoutView(View):
+    @auth_check
+    def get(self, request):
+        user_id = request.user.id
+        grid_layouts = GridLayout.objects.filter(user_id=user_id)
+
+        if grid_layouts:
+            layout =[
+                {
+                'id':grid_layout.grid_id,
+                'x': grid_layout.x,
+                'y': grid_layout.y,
+                'w': grid_layout.w,
+                'h': grid_layout.h,
+                'is_draggable': grid_layout.is_draggable 
+            } for grid_layout in grid_layouts]
+            return JsonResponse({'layout': layout}, status=200)
+
+        if not grid_layouts:
+            return JsonResponse({'layout': 'default'}, status=200)
+
     @auth_check
     def put(self, request):
         try:
@@ -199,4 +220,3 @@ class GridLayoutView(View):
             return JsonResponse({'meesage': 'JSON_DECODE_ERROR'}, status=400)
         except IntegrityError:
             return JsonResponse({'message': 'INTEGRITY_ERROR'}, status=400)
-        
