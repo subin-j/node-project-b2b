@@ -56,7 +56,7 @@ class StockPriceCrawlerAgent(threading.Thread):
         self.channels_lock = channels_lock
         self.channel_layer = get_channel_layer()
 
-        self.stop_flag     = stop_flag
+        self.stop_flag    = stop_flag
         self.suicide_time = None
 
     def add_channel(self, channel):
