@@ -17,9 +17,10 @@ from corporation.models import (
                                 IndustryCode, MainShareholder,
                                 StockType, IncomeStatement,
                                 CurrencyUnit, Conglomerate,
-                                ConglomerateType, Ticker,
-                                StockPrice, ConglomerateCorporation
+                                ConglomerateType, ConglomerateCorporation
                                 )
+
+from stock.models import StockPrice, Ticker
 
 corporation_df              = pd.read_csv('기업정보.csv', dtype=str)
 income_statment_df          = pd.read_csv('손익계산서.csv', dtype=str)
@@ -28,7 +29,6 @@ conglomerate_df             = pd.read_csv('기업집단.csv', dtype=str)
 conglomerate_corporation_df = pd.read_csv('어느회사가어느기업집단인지.csv', dtype=str)
 ticker_df                   = pd.read_csv('보통주우선주.csv', dtype=str)
 stock_price_df              = pd.read_csv('주식가격_우선주포함.csv', dtype=str)
-
 
 
 # columns = corporation_df.columns.tolist()

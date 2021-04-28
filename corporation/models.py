@@ -130,14 +130,3 @@ class ConglomerateType(models.Model):
 
     class Meta:
         db_table = 'conglomerate_types'
-
-
-class Ticker(models.Model):
-    code        = models.CharField(max_length=50, unique=True)
-    stock_name  = models.CharField(max_length=50)
-    corporation = models.ForeignKey('Corporation', on_delete=models.CASCADE)
-
-    class Meta:
-        db_table = 'tickers'
-
-# date, ticker unique_together
