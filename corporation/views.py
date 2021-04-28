@@ -22,7 +22,10 @@ from .models     import (
     IncomeStatement,
     CurrencyUnit,
     Corporation,
-    MainShareholder
+    MainShareholder,
+    Conglomerate,
+    ConglomerateCorporation,
+    ConglomerateType
 )
 
 from utils.decorators import auth_check
@@ -673,3 +676,35 @@ class CorpExcelExporter(View):
             return JsonResponse({'message': 'URL_FORMAT_NOT_VALID'}, status=400)
         except ValueError:
             return JsonResponse({'message': 'NOT_RECOGNIZED_EXCEL_FILE'}, status=400)
+
+
+class ConglomerateListView(View):
+    def get(self, request):
+        try:
+            cocode       = request.GET.get('cocode')
+            conglomerate = Corporation.objects.get(cocode=cocode).conglomerate.all().first()
+            
+            if not conglomerate.exists():
+                conglomerate_list = {}
+                return JsonResponse({'result': conglomerate_list}, status=200)
+            
+            conglomerate_list = {
+                'designate'     : conglomerate.designate.strftime('%Y%m'), 
+                'conglomerate'  : conglomerate.conglomerate,
+                'type'          : conglomerate.conglomerate_type.name,        
+                'tycoon'        : conglomerate.tycoon, 
+                'nfirms'        : conglomerate.nfirms, 
+                'nfirms_public' : conglomerate.nfirms_public, 
+                'at_regular'    : int(float(conglomerate.at_regular) * CURRENCY_UNITS['십억원']),
+                'teq'           : int(float(conglomerate.teq) * CURRENCY_UNITS['십억원']), 
+                'sale'          : int(float(conglomerate.sale) * CURRENCY_UNITS['십억원']),
+                'ni'            : int(float(conglomerate.ni) * CURRENCY_UNITS['십억원']),
+            }
+            return JsonResponse({'result': conglomerate_list}, status=200)
+
+        except ValueError:
+            return JsonResponse({"message": "VALUE_ERROR"}, status=400)
+        except KeyError:
+            return JsonResponse({"message": "KEY_ERROR"}, status=400)
+        except Corporation.DoesNotExist:
+            return JsonResponse(({'message':'DOES_NOT_EXIST'}), status=404)    
