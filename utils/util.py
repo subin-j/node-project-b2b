@@ -1,4 +1,5 @@
-from enum import Enum
+from enum         import Enum
+from urllib.parse import urlparse
 
 from django.http import JsonResponse
 
@@ -19,6 +20,18 @@ class CurrencyUnitType(Enum):
     tril = 'tril'
 
 
+class ExtendedEnum(Enum):
+    @classmethod
+    def list(cls):
+        return list(map(lambda c: c.value, cls))
+
+
+class ExcelUrlType(ExtendedEnum):
+    corporation       = '/corporation'
+    income_statement  = '/corporation/income-statement'
+    main_shareholders = '/corporation/main-shareholders'
+
+
 def handle_income_statement_input_error(statement_type, display, unit, start, end, is_excel):
     if statement_type not in StatementType.__members__:
         return JsonResponse({'message': 'STATEMENT_TYPE_ERROR'}, status=400)
@@ -34,7 +47,20 @@ def handle_income_statement_input_error(statement_type, display, unit, start, en
 
     if is_excel not in ['0', '1']:
         return JsonResponse({'message': "IS_EXCEL_TYPE_ERROR"}, status=400)
+    return True
 
+
+def handle_excel_exporter_input_error(server_host, urls):
+    if not urls:
+        return JsonResponse({'message': 'URL_NOT_GIVEN'}, status=400)
+    
+    for url in urls:
+        parsed_url     = urlparse(url)
+        requested_host = parsed_url.netloc
+        url_path       = parsed_url.path
+        
+        if server_host != requested_host or url_path not in ExcelUrlType.list():
+            return JsonResponse({'message': 'INVALID_URL'}, status=400)
     return True
 
 
