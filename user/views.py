@@ -10,7 +10,7 @@ from django.http  import JsonResponse, HttpResponse
 from django.views import View
 from django.db    import transaction
 
-from .models import User
+from .models import User, GridLayout
 
 from my_settings      import SECRET_KEY, HASHING_ALGORITHM
 from utils.decorators import auth_check
@@ -148,3 +148,55 @@ class ProfileView(View):
 
         except KeyError:
             return JsonResponse({'message': 'KEY_ERROR'}, status=400)
+
+class GridLayoutView(View):
+    @auth_check
+    def put(self, request):
+        try:
+            data        = json.loads(request.body)
+            user_id     = request.user.id
+            new_layouts = data['newLayout']
+            
+            for layout in new_layouts:    
+                grid_id      = layout['id']
+                x            = layout['x']
+                y            = layout['y']
+                w            = layout['w']
+                h            = layout['h']
+                is_draggable = layout.get('isDraggable', True)
+
+                # id='0'인 카드의 is_draggable이 true로 들어오면 에러 리턴  
+                if grid_id == '0' and is_draggable == True:
+                    return JsonResponse({'message':'NOT_VALID'}, status=400)
+
+                grid_layout = GridLayout.objects.filter(grid_id=grid_id, user_id=user_id)
+
+                if grid_layout.exists():
+                    grid_layout.update(
+                        x            = x,
+                        y            = y,
+                        w            = w,
+                        h            = h,
+                        is_draggable = is_draggable
+                    )
+                else: 
+                    GridLayout.objects.create(
+                        grid_id      = grid_id,
+                        user_id      = user_id,
+                        x            = x,
+                        y            = y,
+                        w            = w,
+                        h            = h,
+                        is_draggable = is_draggable
+                        )
+            return JsonResponse({'messge': 'SUCCESS'}, status=201)
+   
+        except ValueError:
+            return JsonResponse({"message":"VALUE_ERROR"}, status=400)
+        except KeyError:
+            return JsonResponse({'message': 'KEY_ERROR'}, status=400)
+        except JSONDecodeError:
+            return JsonResponse({'meesage': 'JSON_DECODE_ERROR'}, status=400)
+        except IntegrityError:
+            return JsonResponse({'message': 'INTEGRITY_ERROR'}, status=400)
+        
