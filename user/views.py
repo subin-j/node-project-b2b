@@ -153,12 +153,11 @@ class GridLayoutView(View):
     @auth_check
     def put(self, request):
         try:
-            data = json.loads(request.body)
-            user_id = request.user.id
-
+            data        = json.loads(request.body)
+            user_id     = request.user.id
             new_layouts = data['newLayout']
-            for layout in new_layouts:
-                
+            
+            for layout in new_layouts:    
                 grid_id      = layout['id']
                 x            = layout['x']
                 y            = layout['y']
