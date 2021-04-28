@@ -1,5 +1,9 @@
 from pathlib import Path
-from my_settings import SECRET_KEY, DATABASES
+
+from my_settings import (
+    SECRET_KEY, DATABASES, CHANNEL_LAYERS
+    )
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -14,7 +18,8 @@ ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     # 'django.contrib.admin',
-    # 'django.contrib.auth',
+    'django.contrib.auth',
+    'channels',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
@@ -22,6 +27,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'user',
     'corporation',
+    'stock',
 ]
 
 MIDDLEWARE = [
@@ -46,7 +52,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
+                # 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
         },
@@ -54,6 +60,11 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'anser_b2b.wsgi.application'
+
+# for websocket ASGI protocol
+ASGI_APPLICATION = 'anser_b2b.routing.application'
+
+CHANNEL_LAYERS = CHANNEL_LAYERS
 
 DATABASES = DATABASES
 
@@ -111,3 +122,13 @@ CORS_ALLOW_HEADERS = (
 )
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
+
+from stock.stock_threads_manager import StockAgentsManger
+import queue
+import threading
+
+manager_queue = queue.Queue()
+
+stock_agent_manager = StockAgentsManger(manager_queue)
+stock_agent_manager.start()

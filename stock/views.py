@@ -19,7 +19,3 @@ class StockCandleChart(View):
 
         ticker          = Ticker.objects.get(code=code)
         stock_price_set = StockPrice.objects.filter(ticker=ticker)
-
-        
-
-

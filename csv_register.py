@@ -16,12 +16,20 @@ from corporation.models import (
                                 CeoName, AccountingMonth,
                                 IndustryCode, MainShareholder,
                                 StockType, IncomeStatement,
-                                CurrencyUnit
+                                CurrencyUnit, Conglomerate,
+                                ConglomerateType, ConglomerateCorporation
                                 )
 
-corporation_df      = pd.read_csv('기업정보.csv', dtype=str)
-income_statment_df  = pd.read_csv('손익계산서.csv', dtype=str)
-main_shareholder_df = pd.read_csv('최대주주.csv', dtype=str)
+from stock.models import StockPrice, Ticker
+
+corporation_df              = pd.read_csv('기업정보.csv', dtype=str)
+income_statment_df          = pd.read_csv('손익계산서.csv', dtype=str)
+main_shareholder_df         = pd.read_csv('최대주주.csv', dtype=str)
+conglomerate_df             = pd.read_csv('기업집단.csv', dtype=str)
+conglomerate_corporation_df = pd.read_csv('어느회사가어느기업집단인지.csv', dtype=str)
+ticker_df                   = pd.read_csv('보통주우선주.csv', dtype=str)
+stock_price_df              = pd.read_csv('주식가격_우선주포함.csv', dtype=str)
+
 
 # columns = corporation_df.columns.tolist()
 
@@ -103,7 +111,90 @@ def push_main_shareholder_csv():
         )
 
 
+def push_conglomerate_csv():
+    for row in conglomerate_df.itertuples():
+        currency_unit     = CurrencyUnit.objects.get(name=row.unit)
+        conglomerate_type = ConglomerateType.objects.get(id=row.type)
+
+        designate_date = datetime.datetime.strptime(row.designate, '%Y%m')
+        
+        Conglomerate.objects.get_or_create(
+            designate         = designate_date,
+            conglomerate      = row.conglomerate,
+            tycoon            = row.tycoon,
+            nfirms            = row.nfirms,
+            nfirms_public     = row.nfirms_public,
+            at_regular        = row.at_regular,
+            teq               = row.teq,
+            sale              = row.sale,
+            ni                = row.ni,
+            gcode             = row.gcode,
+            currency_unit     = currency_unit,
+            conglomerate_type = conglomerate_type
+        )
+
+
+def push_conglomerate_corporation_csv():
+    for row in conglomerate_corporation_df.itertuples():
+        conglomerate = Conglomerate.objects.get(gcode=row.gcode)
+        corporation  = Corporation.objects.get(cocode=row.cocode)
+
+        ConglomerateCorporation.objects.get_or_create(
+            conglomerate = conglomerate,
+            corporation  = corporation
+        )
+
+
+def push_ticker_csv():
+    for row in ticker_df.itertuples():
+        corporation = Corporation.objects.get(cocode=row.cocode)
+
+        Ticker.objects.get_or_create(
+            stock_name  = row.stock_name,
+            code        = row.ticker,
+            corporation = corporation
+        )
+
+
+def push_stock_price_csv():
+    stock_price_entries = list()
+
+    for row in stock_price_df.itertuples():
+        ticker = Ticker.objects.get(code=row.ticker)
+        date   = datetime.datetime.strptime(row.date, '%Y-%m-%d')
+
+        stock_price_entries.append(
+            StockPrice(
+                        ticker   = ticker,
+                        date     = date,
+                        volume   = int(float(row.volume)),
+                        bprc_adj = row.bprc_adj,
+                        hi_adj   = row.hi_adj,
+                        lo_adj   = row.lo_adj,
+                        prc_adj  = row.prc_adj
+                        )
+                    )
+
+    StockPrice.objects.bulk_create(
+        stock_price_entries
+    )
+
+
+csv_list = [
+    push_corporation_csv,
+    push_income_statement_csv,
+    push_main_shareholder_csv,
+    push_conglomerate_csv,
+    push_conglomerate_corporation_csv,
+    push_ticker_csv,
+    push_stock_price_csv
+]
+
+
 if __name__ == '__main__':
-    push_corporation_csv()
-    push_income_statement_csv()
-    push_main_shareholder_csv()
+    run_num = int(input('마지막으로 다운받은 파일의 다음번호를 입력하세요: '))
+
+    run_csv_list = csv_list[(run_num - 1):]
+    for csv in run_csv_list:
+        csv()
+    

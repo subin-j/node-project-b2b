@@ -2,11 +2,11 @@ from django.db import models
 
 
 class Corporation(models.Model):
+    id                         = models.CharField(max_length=50, primary_key=True)
     cocode                     = models.CharField(max_length=8)
     coname                     = models.CharField(max_length=200)
     coname_eng                 = models.CharField(max_length=200, null=True)
     stock_name                 = models.CharField(max_length=200, null=True)
-    ticker                     = models.CharField(max_length=20, unique=True, null=True)
     jurir_no                   = models.CharField(max_length=50, unique=True, null=True)
     bizr_no                    = models.CharField(max_length=50, unique=True, null=True)
     adres                      = models.CharField(max_length=200, null=True)
@@ -19,6 +19,7 @@ class Corporation(models.Model):
     accounting_month           = models.ForeignKey('AccountingMonth', on_delete=models.RESTRICT)
     corporation_classification = models.ForeignKey('CorporationClassification', on_delete=models.RESTRICT)
     industry_code              = models.ForeignKey('IndustryCode', on_delete=models.RESTRICT)
+    conglomerate               = models.ManyToManyField('Conglomerate', through='ConglomerateCorporation')
 
     class Meta:
         db_table = 'corporations'
@@ -96,3 +97,36 @@ class CurrencyUnit(models.Model):
 
     class Meta:
         db_table = 'currency_units'
+
+
+class ConglomerateCorporation(models.Model):
+    conglomerate = models.ForeignKey('Conglomerate', on_delete=models.CASCADE)
+    corporation  = models.ForeignKey('Corporation', on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = 'conglomerates_corporations'
+
+
+class Conglomerate(models.Model):
+    designate         = models.DateField(null=True)
+    conglomerate      = models.CharField(max_length=50, null=True)
+    tycoon            = models.CharField(max_length=50, null=True)
+    nfirms            = models.IntegerField(null=True)
+    nfirms_public     = models.IntegerField(null=True)
+    at_regular        = models.DecimalField(max_digits=20,decimal_places=2, null=True)
+    teq               = models.DecimalField(max_digits=20,decimal_places=2, null=True)
+    sale              = models.DecimalField(max_digits=20,decimal_places=2, null=True)
+    ni                = models.DecimalField(max_digits=20,decimal_places=2, null=True)
+    gcode             = models.CharField(max_length=50, unique=True)
+    currency_unit     = models.ForeignKey('CurrencyUnit', on_delete=models.RESTRICT)
+    conglomerate_type = models.ForeignKey('ConglomerateType', on_delete=models.RESTRICT)
+
+    class Meta:
+        db_table = 'conglomerates'
+
+
+class ConglomerateType(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+
+    class Meta:
+        db_table = 'conglomerate_types'

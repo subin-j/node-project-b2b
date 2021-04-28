@@ -62,3 +62,18 @@ def handle_excel_exporter_input_error(server_host, urls):
         if server_host != requested_host or url_path not in ExcelUrlType.list():
             return JsonResponse({'message': 'INVALID_URL'}, status=400)
     return True
+
+
+def handle_stock_price_crawler_input_error(error):
+    error_msg = str()
+    status = False
+
+    if type(error) == IOError:
+        error_msg = "stocks object/file was not found or unable to retrieve"
+    elif type(error) == IndexError:
+        error_msg = "stock data input was unavailable or not found in Investing.com"
+    elif type(error) == RuntimeError:
+        error_msg = "stock data was not found"
+    elif type(error) == ValueError:
+        error_msg = "you have not registered anything"
+    return status, error_msg
