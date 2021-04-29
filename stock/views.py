@@ -1,5 +1,6 @@
 import json
 import datetime
+import calendar
 from dateutil.relativedelta  import relativedelta
 
 
@@ -36,8 +37,8 @@ class StockCandleChart(View):
                                 'volume'  : stock_price_qs.volume
                                 } for stock_price_qs in stock_prices_qs]
         else:
-            groups_dict = self.get_stock_price_groups_by_chart_type(chart_type, stock_prices_qs)
-            stock_prices        = self.get_stock_prices_list(groups_dict)
+            groups_dict  = self.get_stock_price_groups_by_chart_type(chart_type, stock_prices_qs)
+            stock_prices = self.get_stock_prices_list(groups_dict)
 
         data = {
                 'name'  : ticker.stock_name,
@@ -48,16 +49,18 @@ class StockCandleChart(View):
         return JsonResponse({'results': data}, status=200)
 
     def get_stock_price_groups_by_chart_type(self, chart_type, stock_prices_qs):
-        if chart_type == 'weekly':
-            base_date = datetime.date.today()
-
         pre_group_num = int()
         groups_dict   = dict()
 
         for stock_price_qs in stock_prices_qs:
             if chart_type == 'weekly':
+                today       = datetime.datetime.today()
+                this_friday = today + datetime.timedelta((calendar.FRIDAY - today.weekday()) % 7)
+                base_date   = this_friday.date()
+
                 time_diff         = (base_date - stock_price_qs.date).days
                 current_group_num = int(time_diff / 7)
+    
             elif chart_type == 'monthly':
                 current_group_num = stock_price_qs.date.strftime('%Y-%m')
             
