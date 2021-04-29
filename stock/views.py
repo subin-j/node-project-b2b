@@ -36,8 +36,8 @@ class StockCandleChart(View):
                                 'volume'  : stock_price_qs.volume
                                 } for stock_price_qs in stock_prices_qs]
         else:
-            monthly_groups_dict = self.get_stock_price_groups_by_chart_type(chart_type, stock_prices_qs)
-            stock_prices        = self.get_stock_prices_list(monthly_groups_dict)
+            groups_dict = self.get_stock_price_groups_by_chart_type(chart_type, stock_prices_qs)
+            stock_prices        = self.get_stock_prices_list(groups_dict)
 
         data = {
                 'name'  : ticker.stock_name,
