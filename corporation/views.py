@@ -147,7 +147,6 @@ class CorporationSearchView(View):
                 Q(coname_eng__icontains=keywords) |
                 Q(ticker__code__icontains=keywords)
             ).distinct().order_by('coname')
-            # ticker = Ticker.objects.filter(code__icontains=keywords).distinct().order_by('coname')
 
             if not corporation_kw:
                 corporation_kw = Corporation.objects.filter(coname__icontains=engkor(keywords)).order_by('coname')
