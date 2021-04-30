@@ -165,7 +165,7 @@ class GridLayoutView(View):
                 'w': grid_layout.w,
                 'h': grid_layout.h,
                 'is_draggable': grid_layout.is_draggable 
-            } for grid_layout in grid_layouts]
+            } for grid_layout in grid_layouts if grid_layout.is_displyed]
             return JsonResponse({'layout': layout}, status=200)
 
         if not grid_layouts:
@@ -178,6 +178,7 @@ class GridLayoutView(View):
             user_id     = request.user.id
             new_layouts = data['newLayout']
             
+            grid_ids = list()
             for layout in new_layouts:    
                 grid_id      = layout['id']
                 x            = layout['x']
@@ -185,10 +186,6 @@ class GridLayoutView(View):
                 w            = layout['w']
                 h            = layout['h']
                 is_draggable = layout.get('isDraggable', True)
-
-                # id='0'인 카드의 is_draggable이 true로 들어오면 에러 리턴  
-                if grid_id == '0' and is_draggable == True:
-                    return JsonResponse({'message':'NOT_VALID'}, status=400)
 
                 grid_layout = GridLayout.objects.filter(grid_id=grid_id, user_id=user_id)
 
@@ -198,7 +195,8 @@ class GridLayoutView(View):
                         y            = y,
                         w            = w,
                         h            = h,
-                        is_draggable = is_draggable
+                        is_draggable = is_draggable,
+                        is_displyed  = True
                     )
                 else: 
                     GridLayout.objects.create(
@@ -210,6 +208,10 @@ class GridLayoutView(View):
                         h            = h,
                         is_draggable = is_draggable
                         )
+                grid_ids.append(grid_id)
+            print(grid_ids)
+            GridLayout.objects.exclude(grid_id__in=grid_ids).update(is_displyed=False)
+
             return JsonResponse({'messge': 'SUCCESS'}, status=201)
    
         except ValueError:

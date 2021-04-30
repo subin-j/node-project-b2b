@@ -16,6 +16,7 @@ class GridLayout(models.Model):
     w            = models.IntegerField()
     h            = models.IntegerField()
     is_draggable = models.BooleanField(default=True)
+    is_displyed  = models.BooleanField(default=True)
     grid_id      = models.CharField(max_length=100)
     user         = models.ForeignKey('User', on_delete=models.CASCADE)
     
