@@ -685,21 +685,21 @@ class ConglomerateListView(View):
             conglomerate = Corporation.objects.get(cocode=cocode).conglomerate.all().first()
             
             if not conglomerate:
-                return JsonResponse({'result': {}}, status=200)
+                return JsonResponse({'message': 'NOT_FOUND'}, status=404)
             
-            conglomerate_list = {
+            conglomerate_info = {
                 'designate'     : conglomerate.designate.strftime('%Y%m'), 
                 'conglomerate'  : conglomerate.conglomerate,
                 'type'          : conglomerate.conglomerate_type.name,        
                 'tycoon'        : conglomerate.tycoon, 
                 'nfirms'        : conglomerate.nfirms, 
                 'nfirms_public' : conglomerate.nfirms_public, 
-                'at_regular'    : int(float(conglomerate.at_regular) * CURRENCY_UNITS['십억원']),
-                'teq'           : int(float(conglomerate.teq) * CURRENCY_UNITS['십억원']), 
-                'sale'          : int(float(conglomerate.sale) * CURRENCY_UNITS['십억원']),
-                'ni'            : int(float(conglomerate.ni) * CURRENCY_UNITS['십억원']),
+                'at_regular'    : int(float(conglomerate.at_regular) * CURRENCY_UNITS[conglomerate.currency_unit.name]),
+                'teq'           : int(float(conglomerate.teq) * CURRENCY_UNITS[conglomerate.currency_unit.name]), 
+                'sale'          : int(float(conglomerate.sale) * CURRENCY_UNITS[conglomerate.currency_unit.name]),
+                'ni'            : int(float(conglomerate.ni) * CURRENCY_UNITS[conglomerate.currency_unit.name]),
             }
-            return JsonResponse({'result': conglomerate_list}, status=200)
+            return JsonResponse({'result': conglomerate_info}, status=200)
 
         except ValueError:
             return JsonResponse({"message": "VALUE_ERROR"}, status=400)
