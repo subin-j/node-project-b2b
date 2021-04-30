@@ -2,7 +2,7 @@ import investpy
 import json
 import re
 
-from utils.util import handle_stock_price_crawler_input_error
+from utils.error_handlers import handle_stock_price_crawler_input_error
 
 
 def get_current_price(stock_symbol):

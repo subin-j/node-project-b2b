@@ -18,7 +18,7 @@ class StockPriceView(View):
 
 class StockCandleChart(View):
     def get(self, request):
-        chart_type  = request.GET.get('time_option')
+        chart_type  = request.GET.get('chart_type')
         code        = request.GET.get('ticker')
 
         two_years_from_now = datetime.datetime.now() - relativedelta(years=2)
@@ -65,6 +65,7 @@ class StockCandleChart(View):
                 current_group_num = stock_price_qs.date.strftime('%Y-%m')
             
             groups_dict.setdefault(current_group_num, [stock_price_qs])
+            
             if current_group_num == pre_group_num:
                 groups_dict[current_group_num].append(stock_price_qs)
             pre_group_num = current_group_num
@@ -105,5 +106,5 @@ class StockCandleChart(View):
                 'volume': volume
             }
             stock_prices.append(weekly_stock_price)
-
+            
         return stock_prices
