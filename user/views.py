@@ -187,12 +187,7 @@ class GridLayoutView(View):
                 h            = layout['h']
                 is_draggable = layout.get('isDraggable', True)
 
-                # id='0'인 카드의 is_draggable이 true로 들어오면 에러 리턴  
-                if grid_id == '0' and is_draggable == True:
-                    return JsonResponse({'message':'NOT_VALID'}, status=400)
-
                 grid_layout = GridLayout.objects.filter(grid_id=grid_id, user_id=user_id)
-
                 if grid_layout.exists():
                     grid_layout.update(
                         x            = x,
