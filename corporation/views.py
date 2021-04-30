@@ -24,6 +24,7 @@ from .models import (
     Corporation,
     MainShareholder
 )
+from stock.models import Ticker
 
 from utils.decorators     import auth_check
 from utils.eng2kor        import engkor
@@ -64,7 +65,7 @@ class CorporationInfoView(View):
                 'coname'        : corp_info.coname,      
                 'coname_eng'    : corp_info.coname_eng,
                 'stock_name'    : corp_info.stock_name,         
-                'ticker'        : corp_info.ticker,
+                'ticker'        : [ticker.code for ticker in corp_info.ticker_set.all()],
                 'ceo_nm'        : [ceoname.name for ceoname in corp_info.ceoname_set.all()],    
                 'corp_cls'      : corp_info.corporation_classification.symbol_description,
                 'jurir_no'      : corp_info.jurir_no,
@@ -144,7 +145,7 @@ class CorporationSearchView(View):
             corporation_kw = Corporation.objects.filter(
                 Q(coname__icontains=keywords) |
                 Q(coname_eng__icontains=keywords) |
-                Q(ticker__icontains=keywords)
+                Q(ticker__code__icontains=keywords)
             ).distinct().order_by('coname')
 
             if not corporation_kw:
@@ -158,7 +159,7 @@ class CorporationSearchView(View):
                 'coname'        : kw.coname,      
                 'coname_eng'    : kw.coname_eng,  
                 'corp_cls'      : kw.corporation_classification.symbol_description,
-                'ticker'        : kw.ticker
+                'ticker'        : [ticker.code for ticker in kw.ticker_set.all()]
             } for kw in corporation_kw]
 
             return JsonResponse({'search_result':search_result}, status=200)
