@@ -22,7 +22,10 @@ from .models     import (
     IncomeStatement,
     CurrencyUnit,
     Corporation,
-    MainShareholder
+    MainShareholder,
+    Conglomerate,
+    ConglomerateCorporation,
+    ConglomerateType
 )
 from stock.models import Ticker
 
@@ -674,3 +677,34 @@ class CorpExcelExporter(View):
             return JsonResponse({'message': 'URL_FORMAT_NOT_VALID'}, status=400)
         except ValueError:
             return JsonResponse({'message': 'NOT_RECOGNIZED_EXCEL_FILE'}, status=400)
+
+
+class ConglomerateListView(View):
+    def get(self, request):
+        try:
+            cocode       = request.GET.get('cocode')
+            conglomerate = Corporation.objects.get(cocode=cocode).conglomerate.all().first()
+            
+            if not conglomerate:
+                return JsonResponse({'message': 'NOT_FOUND'}, status=404)
+            
+            conglomerate_info = {
+                'designate'     : conglomerate.designate.strftime('%Y%m'), 
+                'conglomerate'  : conglomerate.conglomerate,
+                'type'          : conglomerate.conglomerate_type.name,        
+                'tycoon'        : conglomerate.tycoon, 
+                'nfirms'        : conglomerate.nfirms, 
+                'nfirms_public' : conglomerate.nfirms_public, 
+                'at_regular'    : int(float(conglomerate.at_regular) * CURRENCY_UNITS[conglomerate.currency_unit.name]),
+                'teq'           : int(float(conglomerate.teq) * CURRENCY_UNITS[conglomerate.currency_unit.name]), 
+                'sale'          : int(float(conglomerate.sale) * CURRENCY_UNITS[conglomerate.currency_unit.name]),
+                'ni'            : int(float(conglomerate.ni) * CURRENCY_UNITS[conglomerate.currency_unit.name]),
+            }
+            return JsonResponse({'result': conglomerate_info}, status=200)
+
+        except ValueError:
+            return JsonResponse({"message": "VALUE_ERROR"}, status=400)
+        except KeyError:
+            return JsonResponse({"message": "KEY_ERROR"}, status=400)
+        except Corporation.DoesNotExist:
+            return JsonResponse(({'message':'DOES_NOT_EXIST'}), status=404)    
