@@ -10,6 +10,7 @@ from django.views     import View
 
 from .models import StockPrice, Ticker
 
+from utils.error_handlers import handle_candle_chart_input_error
 
 class StockPriceView(View):
     def get(self, request):
@@ -18,8 +19,12 @@ class StockPriceView(View):
 
 class StockCandleChart(View):
     def get(self, request):
-        chart_type  = request.GET.get('chart_type')
-        code        = request.GET.get('ticker')
+        chart_type  = request.GET.get('chart_type', 'daily')
+        code        = request.GET.get('ticker', None)
+
+        error_handler_res = handle_candle_chart_input_error(chart_type, code)
+        if isinstance(error_handler_res, JsonResponse):
+            return error_handler_res
 
         two_years_from_now = datetime.datetime.now() - relativedelta(years=2)
         
