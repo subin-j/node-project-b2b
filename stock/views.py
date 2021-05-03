@@ -63,7 +63,9 @@ class StockCandleChart(View):
         this_friday = today + datetime.timedelta((calendar.FRIDAY - today.weekday()) % 7)
         base_date   = this_friday.date()
 
-        results_qs = stock_prices_qs.annotate(group_id=Cast(ExtractDay(base_date - F('date')), IntegerField()) / 7)\
+        results_qs = stock_prices_qs\
+                            .annotate(group_id=Cast(
+                                ExtractDay(base_date - F('date')), IntegerField()) / 7)\
                             .values('group_id')\
                             .annotate(
                                     bprc_adj=Window(
@@ -92,7 +94,7 @@ class StockCandleChart(View):
                                         expression=Sum('volume'),
                                         partition_by=F('group_id')
                                     )
-                                ).distinct('date')\
-                                 .values('date', 'bprc_adj', 'prc_adj', 'hi_adj', 'lo_adj', 'volume')
-                                
+                                )\
+                            .distinct('date')\
+                            .values('date', 'bprc_adj', 'prc_adj', 'hi_adj', 'lo_adj', 'volume')
         return list(results_qs)
