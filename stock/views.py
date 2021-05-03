@@ -3,14 +3,19 @@ import datetime
 import calendar
 from dateutil.relativedelta  import relativedelta
 
-
 from django.http      import JsonResponse
 from django.shortcuts import render
 from django.views     import View
+from django.db.models import F, IntegerField, Subquery, OuterRef
+from django.db.models.expressions import Window
+from django.db.models.functions import FirstValue, ExtractDay, Cast
+from django.db.models.aggregates import Max, Min, Sum
+from django.utils.formats import localize
 
 from .models import StockPrice, Ticker
 
 from utils.error_handlers import handle_candle_chart_input_error
+
 
 class StockPriceView(View):
     def get(self, request):
@@ -32,7 +37,7 @@ class StockCandleChart(View):
         stock_prices_qs = StockPrice.objects.filter(ticker=ticker, date__gte=two_years_from_now).order_by('date')
 
         if chart_type == 'daily':
-            stock_prices  = [
+            stock_prices = [
                                 {
                                 'date'    : str(stock_price_qs.date),
                                 'bprc_adj': stock_price_qs.bprc_adj,
@@ -42,8 +47,7 @@ class StockCandleChart(View):
                                 'volume'  : stock_price_qs.volume
                                 } for stock_price_qs in stock_prices_qs]
         else:
-            groups_dict  = self.get_stock_price_groups_by_chart_type(chart_type, stock_prices_qs)
-            stock_prices = self.get_stock_prices_list(groups_dict)
+            stock_prices = self.get_stock_prices_by_chart_type(chart_type, stock_prices_qs)
 
         data = {
                 'name'  : ticker.stock_name,
@@ -53,63 +57,34 @@ class StockCandleChart(View):
 
         return JsonResponse({'results': data}, status=200)
 
-    def get_stock_price_groups_by_chart_type(self, chart_type, stock_prices_qs):
-        pre_group_num = int()
-        groups_dict   = dict()
+    def get_stock_prices_by_chart_type(self, chart_type, stock_prices_qs):
+        today       = datetime.datetime.today()
+        this_friday = today + datetime.timedelta((calendar.FRIDAY - today.weekday()) % 7)
+        base_date   = this_friday.date()
 
-        for stock_price_qs in stock_prices_qs:
-            if chart_type == 'weekly':
-                today       = datetime.datetime.today()
-                this_friday = today + datetime.timedelta((calendar.FRIDAY - today.weekday()) % 7)
-                base_date   = this_friday.date()
+        # group_id 임시 컬럼 SELECT             
+        t1 = stock_prices_qs.annotate(group_id=Cast(ExtractDay(base_date - F('date')), IntegerField()) / 7).order_by('date')
 
-                time_diff         = (base_date - stock_price_qs.date).days
-                current_group_num = int(time_diff / 7)
-    
-            elif chart_type == 'monthly':
-                current_group_num = stock_price_qs.date.strftime('%Y-%m')
-            
-            groups_dict.setdefault(current_group_num, [stock_price_qs])
-            
-            if current_group_num == pre_group_num:
-                groups_dict[current_group_num].append(stock_price_qs)
-            pre_group_num = current_group_num
+        # group_id 를 기준으로 첫 번째 값 가져오기 (시가, 종가)
+        t2 = t1.annotate(
+                    weekly_bprc_adj=Window(
+                        expression   = FirstValue('bprc_adj'),
+                        partition_by = F('group_id'),
+                        order_by     = F('date').asc()
+                    ),
+                    weekly_prc_adj=Window(
+                        expression   = FirstValue('prc_adj'),
+                        partition_by = F('group_id'),
+                        order_by     = F('date').desc()
+                    )
+                )
 
-        return groups_dict
-
-    def get_stock_prices_list(self, groups_dict):
-        stock_prices = list()
-
-        for group in groups_dict:
-            stock_price_list = groups_dict[group]
-
-            first_stock_price = stock_price_list[0]
-            last_stock_price  = stock_price_list[-1]
-            
-            bprc_adj = first_stock_price.bprc_adj
-            prc_adj  = last_stock_price.prc_adj
-
-            lowest  = first_stock_price.lo_adj
-            highest = first_stock_price.hi_adj
-            volume  = 0
-
-            for stock_price in stock_price_list:
-                if stock_price.lo_adj < lowest:
-                    lowest = stock_price.lo_adj
-                
-                if stock_price.hi_adj > highest:
-                    highest = stock_price.hi_adj
-                
-                volume += stock_price.volume
-
-            weekly_stock_price = {
-                'date': last_stock_price.date,
-                'bprc_adj': bprc_adj,
-                'prc_adj': prc_adj,
-                'hi_adj': highest,
-                'lo_adj': lowest,
-                'volume': volume
-            }
-            stock_prices.append(weekly_stock_price)
-            
-        return stock_prices
+        results = t2.values('group_id').annotate(
+            date   = Max('date'),
+            volume = Sum('volume'),
+            hi_adj = Max('hi_adj'),
+            lo_adj = Min('lo_adj')
+            ).values('weekly_prc_adj', 'weekly_bprc_adj')
+        
+        print(results)
+        return results
