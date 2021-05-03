@@ -34,7 +34,7 @@ class StockCandleChart(View):
         two_years_from_now = datetime.datetime.now() - relativedelta(years=2)
         
         ticker          = Ticker.objects.get(code=code)
-        stock_prices_qs = StockPrice.objects.filter(ticker=ticker, date__gte=two_years_from_now).order_by('date')
+        stock_prices_qs = StockPrice.objects.filter(ticker=ticker, date__gte=two_years_from_now)
 
         if chart_type == 'daily':
             stock_prices = [
@@ -49,6 +49,7 @@ class StockCandleChart(View):
         else:
             stock_prices = self.get_stock_prices_by_chart_type(chart_type, stock_prices_qs)
 
+
         data = {
                 'name'  : ticker.stock_name,
                 'ticker': ticker.code,
@@ -62,29 +63,36 @@ class StockCandleChart(View):
         this_friday = today + datetime.timedelta((calendar.FRIDAY - today.weekday()) % 7)
         base_date   = this_friday.date()
 
-        # group_id 임시 컬럼 SELECT             
-        t1 = stock_prices_qs.annotate(group_id=Cast(ExtractDay(base_date - F('date')), IntegerField()) / 7).order_by('date')
-
-        # group_id 를 기준으로 첫 번째 값 가져오기 (시가, 종가)
-        t2 = t1.annotate(
-                    weekly_bprc_adj=Window(
-                        expression   = FirstValue('bprc_adj'),
-                        partition_by = F('group_id'),
-                        order_by     = F('date').asc()
-                    ),
-                    weekly_prc_adj=Window(
-                        expression   = FirstValue('prc_adj'),
-                        partition_by = F('group_id'),
-                        order_by     = F('date').desc()
-                    )
-                )
-
-        results = t2.values('group_id').annotate(
-            date   = Max('date'),
-            volume = Sum('volume'),
-            hi_adj = Max('hi_adj'),
-            lo_adj = Min('lo_adj')
-            ).values('weekly_prc_adj', 'weekly_bprc_adj')
-        
-        print(results)
-        return results
+        results_qs = stock_prices_qs.annotate(group_id=Cast(ExtractDay(base_date - F('date')), IntegerField()) / 7)\
+                            .values('group_id')\
+                            .annotate(
+                                    bprc_adj=Window(
+                                        expression   = FirstValue('bprc_adj'),
+                                        partition_by = F('group_id'),
+                                        order_by     = F('date').asc()
+                                    ),
+                                    prc_adj=Window(
+                                        expression   = FirstValue('prc_adj'),
+                                        partition_by = F('group_id'),
+                                        order_by     = F('date').desc()
+                                    ),
+                                    date=Window(
+                                        expression= Max('date'),
+                                        partition_by= F('group_id')
+                                    ),
+                                    hi_adj=Window(
+                                        expression= Max('hi_adj'),
+                                        partition_by=F('group_id')
+                                    ),
+                                    lo_adj=Window(
+                                        expression=Min('lo_adj'),
+                                        partition_by=F('group_id')
+                                    ),
+                                    volume=Window(
+                                        expression=Sum('volume'),
+                                        partition_by=F('group_id')
+                                    )
+                                ).distinct('date')\
+                                 .values('date', 'bprc_adj', 'prc_adj', 'hi_adj', 'lo_adj', 'volume')
+                                
+        return list(results_qs)
