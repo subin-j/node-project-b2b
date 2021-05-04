@@ -2,6 +2,14 @@ import jwt
 import bcrypt
 import json
 import re
+import base64
+import random
+import time
+import hmac
+import hashlib
+import requests
+import redis
+import datetime
 
 from enum import Enum
 from json import JSONDecodeError
@@ -12,9 +20,19 @@ from django.db    import transaction
 
 from .models import User, GridLayout
 
-from my_settings      import SECRET_KEY, HASHING_ALGORITHM
+from my_settings      import (
+                            SECRET_KEY, HASHING_ALGORITHM, NAVER_ACCESS_KEY,
+                            FROM_PHONE_NUMBER, SMS_SERVICE_ID, NAVER_SECRET_KEY,
+                            REDIS_HOST, REDIS_PORT
+                            )
 from utils.decorators import auth_check
 from utils.eng2kor    import engkor
+from utils.redis_connection import RedisConnection
+
+
+SMS_AUTH_CONTENT = 'Anser B2B Service\n Authentication Code: '
+COUNTRY_CODE = '82'
+SMS_AUTH_TIMEOUT = 300
 
 
 class SignUpView(View):
@@ -22,18 +40,31 @@ class SignUpView(View):
         try:
             data = json.loads(request.body)
             
-            email            = data['email']
-            password         = data['password']
-            corporation_name = data['corporation_name']
-            name             = data['name']
+            email             = data['email']
+            password          = data['password']
+            corporation_name  = data['corporation_name']
+            name              = data['name']
+            auth_phone_number = data['auth_phone_number']
 
-            p_email    = re.compile(r'^[a-zA-Z0-9+-_.]+@[a-zA-Z0-9_-]+\.[a-zA-Z-.]+$')
-            p_password = re.compile(r'^(?=.*[!-/:-@])(?!.*[ㄱ-ㅣ가-힣]).{8,20}$')
+            rd   = RedisConnection()
+            auth = rd.conn.hgetall(auth_phone_number)
+            if not auth:
+                return JsonResponse({'message': 'CODE_AUTH_ERROR'}, status=400)                
+
+            is_verified = auth['is_verified']
+            if is_verified != '1':
+                return JsonResponse({'message': 'PHONE_NUMBER_VERIFICATION_NOT_COMPLETE'}, status=400)
+
+            p_email        = re.compile(r'^[a-zA-Z0-9+-_.]+@[a-zA-Z0-9_-]+\.[a-zA-Z-.]+$')
+            p_password     = re.compile(r'^(?=.*[!-/:-@])(?!.*[ㄱ-ㅣ가-힣]).{8,20}$')
+            p_phone_number = re.compile(r'^[0-9]{11}$')
 
             if not p_email.match(email):
-                return JsonResponse({'message': 'EMAIL_FORM_IS_NOT_VALID'}, status=400)
+                return JsonResponse({'message': 'EMAIL_FORM_NOT_VALID'}, status=400)
             if not p_password.match(password):
-                return JsonResponse({'message': 'PASSWORD_FORM_IS_NOT_VALID'}, status=400)
+                return JsonResponse({'message': 'PASSWORD_FORM_NOT_VALID'}, status=400)
+            if not p_phone_number.match(auth_phone_number):
+                return JsonResponse({'message': 'PHONE_NUMBER_NOT_VALID'}, status=400)
             if not len(name) < 100:
                 return JsonResponse({'message': 'NAME_TOO_LONG'}, status=400)
 
@@ -47,7 +78,8 @@ class SignUpView(View):
                         email            = email,
                         password         = decoded_hashed_pw,
                         corporation_name = corporation_name,
-                        name             = name
+                        name             = name,
+                        phone_number     = auth_phone_number
                         )
             return JsonResponse({'message': 'SUCCESS'}, status=201)
 
@@ -64,7 +96,7 @@ class SignUpView(View):
         if User.objects.filter(email=email).exists():
             return JsonResponse({'message': 'DUPLICATE'}, status=200)
         return JsonResponse({'message': 'NOT_DUPLICATE'}, status=200)
-        
+
 
 class SignInView(View):
     def post(self, request):
@@ -231,3 +263,96 @@ class GridLayoutView(View):
             return JsonResponse({'meesage': 'JSON_DECODE_ERROR'}, status=400)
         except IntegrityError:
             return JsonResponse({'message': 'INTEGRITY_ERROR'}, status=400)
+
+
+class SMSCodeRequestView(View):
+    def post(self, request):
+        try:
+            data              = json.loads(request.body)
+            auth_phone_number = data['auth_phone_number']
+
+            random_code        = str(random.randint(1000, 9999))
+            hashed_random_code = bcrypt.hashpw(random_code.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            is_verified        = '0'
+
+            auth = {'hashed_random_code': hashed_random_code, 'is_verified': is_verified}
+
+            rd = RedisConnection()
+            rd.conn.hmset(auth_phone_number, auth)
+            rd.conn.expire(auth_phone_number, SMS_AUTH_TIMEOUT)
+
+            timestamp         = str(int(time.time() * 1000))
+            signature         = self.make_signature()
+
+            headers = {
+                'Content-Type':'application/json; charset=UTF-8',
+                'x-ncp-apigw-timestamp':timestamp,
+                'x-ncp-iam-access-key': NAVER_ACCESS_KEY,
+                'x-ncp-apigw-signature-v2':signature
+            } 
+            
+            body = {
+                "type": "sms",
+                "countryCode": COUNTRY_CODE,
+                "from": "{}".format(FROM_PHONE_NUMBER),
+                "content": "{}{}".format(SMS_AUTH_CONTENT, random_code),
+                "messages":[
+                    {
+                        "to": "{}".format(auth_phone_number)
+                    }
+                ]
+            }
+
+            sms_service_url = 'https://sens.apigw.ntruss.com/sms/v2/services/{}/messages'.format(SMS_SERVICE_ID)
+            response        = requests.post(sms_service_url, headers=headers, data=json.dumps(body))
+            
+            if response.status_code == 202:
+                return JsonResponse({'message': 'CODE_SEND_SUCCESS'})
+            return JsonResponse({'message': 'CODE_SEND_ERROR'})
+
+        except KeyError:
+            return JsonResponse({'message': 'KEY_ERROR'}, status=400)            
+        except JSONDecodeError:
+            return JsonResponse({'message': 'JSON_DECODE_ERROR'}, status=400)
+
+    def make_signature(self):
+        timestamp   = int(time.time() * 1000)
+        timestamp   = str(timestamp)
+
+        secret_key  = bytes(NAVER_SECRET_KEY, 'UTF-8')
+
+        method      = "POST"
+        uri         = '/sms/v2/services/{}/messages'.format(SMS_SERVICE_ID)
+
+        message     = method + " " + uri + "\n" + timestamp + "\n" + NAVER_ACCESS_KEY
+        message     = bytes(message, 'UTF-8')
+
+        signing_key = base64.b64encode(hmac.new(secret_key, message, digestmod=hashlib.sha256).digest())
+        return signing_key   
+        
+
+class SMSCodeCheckView(View):
+    def post(self, request):
+        try:
+            data              = json.loads(request.body)
+            auth_code         = data['auth_code']
+            auth_phone_number = data['auth_phone_number']
+
+            rd   = RedisConnection()
+            auth = rd.conn.hgetall(auth_phone_number)
+            if not auth:
+                return JsonResponse({'message': 'CODE_EXPIRED'}, status=400)
+
+            hashed_random_code = auth['hashed_random_code']
+
+            if not bcrypt.checkpw(auth_code.encode('utf-8'), hashed_random_code.encode('utf-8')):
+                return JsonResponse({'message': 'CODE_NOT_MATCHED'}, status=400)
+
+            auth['is_verified'] = '1'
+            rd.conn.hmset(auth_phone_number, auth)
+            return JsonResponse({'message': 'SUCCESS'}, status=201)
+
+        except KeyError:
+            return JsonResponse({'message': 'KEY_ERROR'}, status=400)            
+        except JSONDecodeError:
+            return JsonResponse({'message': 'JSON_DECODE_ERROR'}, status=400)
