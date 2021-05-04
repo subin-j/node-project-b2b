@@ -8,9 +8,8 @@ from django.shortcuts import render
 from django.views     import View
 from django.db.models import F, IntegerField
 from django.db.models.expressions import Window
-from django.db.models.functions import FirstValue, ExtractDay, Cast, TruncMonth
-from django.db.models.aggregates import Max, Min, Sum
-from django.utils.formats import localize
+from django.db.models.functions   import FirstValue, ExtractDay, Cast, TruncMonth
+from django.db.models.aggregates  import Max, Min, Sum
 
 from .models import StockPrice, Ticker
 
@@ -42,7 +41,6 @@ class StockCandleChart(View):
                 'ticker': ticker.code,
                 'values': stock_prices
             }
-
         return JsonResponse({'results': data}, status=200)
 
     def get_candle_chart_by_type(self, chart_type, stock_prices_qs):
@@ -91,6 +89,5 @@ class StockCandleChart(View):
                             )\
                             .distinct('date')\
                             .values('date', 'bprc_adj', 'prc_adj', 'hi_adj', 'lo_adj', 'volume')
-
         results = list(second_qs)
         return results
