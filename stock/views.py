@@ -47,11 +47,8 @@ class StockCandleChart(View):
                                 'volume'  : stock_price_qs.volume
                                 } for stock_price_qs in stock_prices_qs]
 
-        elif chart_type == 'weekly':
+        else:
             stock_prices = self.get_candle_chart_by_type(chart_type, stock_prices_qs)
-
-        elif chart_type == 'monthly':
-            pass
 
         data = {
                 'name'  : ticker.stock_name,
@@ -66,40 +63,42 @@ class StockCandleChart(View):
         this_friday = today + datetime.timedelta((calendar.FRIDAY - today.weekday()) % 7)
         base_date   = this_friday.date()
 
-        results_qs = stock_prices_qs\
-                            .annotate(group_id=Cast(
-                                ExtractDay(base_date - F('date')), IntegerField()) / 7)\
-                            .annotate(
-                                    w_bprc_adj=Window(
-                                        expression   = FirstValue('bprc_adj'),
-                                        partition_by = F('group_id'),
-                                        order_by     = F('date').asc()
-                                    ),
-                                    w_prc_adj=Window(
-                                        expression   = FirstValue('prc_adj'),
-                                        partition_by = F('group_id'),
-                                        order_by     = F('date').desc()
-                                    ),
-                                    w_date=Window(
-                                        expression= Max('date'),
-                                        partition_by= F('group_id')
-                                    ),
-                                    w_hi_adj=Window(
-                                        expression= Max('hi_adj'),
-                                        partition_by=F('group_id')
-                                    ),
-                                    w_lo_adj=Window(
-                                        expression=Min('lo_adj'),
-                                        partition_by=F('group_id')
-                                    ),
-                                    w_volume=Window(
-                                        expression=Sum('volume'),
-                                        partition_by=F('group_id')
-                                    )
-                                )\
-                            .distinct('date')\
-                            .values('date', 'bprc_adj', 'prc_adj', 'hi_adj', 'lo_adj', 'volume')
+        first_qs = stock_prices_qs.annotate(group_id=Cast(
+                                     ExtractDay(base_date - F('date')), IntegerField()) / 7)\
+                                     .values('group_id')
+        print(first_qs)
         
-        print(results_qs.query)
-                            
-        return list(results_qs)
+        second_qs = first_qs.annotate(
+                                        bprc_adj=Window(
+                                            expression   = FirstValue('bprc_adj'),
+                                            partition_by = F('group_id'),
+                                            order_by     = F('date').asc()
+                                        ),
+                                        prc_adj=Window(
+                                            expression   = FirstValue('prc_adj'),
+                                            partition_by = F('group_id'),
+                                            order_by     = F('date').desc()
+                                        ),
+                                        date=Window(
+                                            expression= Max('date'),
+                                            partition_by= F('group_id')
+                                        ),
+                                        hi_adj=Window(
+                                            expression= Max('hi_adj'),
+                                            partition_by=F('group_id')
+                                        ),
+                                        lo_adj=Window(
+                                            expression=Min('lo_adj'),
+                                            partition_by=F('group_id')
+                                        ),
+                                        volume=Window(
+                                            expression=Sum('volume'),
+                                            partition_by=F('group_id')
+                                        )
+                                    )\
+                                    .distinct('date')\
+                                    .values('date', 'bprc_adj', 'prc_adj', 'hi_adj', 'lo_adj', 'volume')
+        print(second_qs.query)
+
+        results = list(second_qs)
+        return results
