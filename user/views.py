@@ -1,5 +1,4 @@
 import jwt
-import bcrypt
 import json
 import re
 
@@ -9,6 +8,7 @@ from json import JSONDecodeError
 from django.http  import JsonResponse, HttpResponse
 from django.views import View
 from django.db    import transaction
+from django.contrib.auth.hashers import make_password, check_password
 
 from .models import User, GridLayout
 
@@ -40,12 +40,12 @@ class SignUpView(View):
             if User.objects.filter(email=email).exists():
                 return JsonResponse({'message': 'EMAIL_ALREADY_EXISTS'}, status=422)
             
-            hashed_pw         = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-            decoded_hashed_pw = hashed_pw.decode('utf-8')
+            # hashed_pw         = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+            # decoded_hashed_pw = hashed_pw.decode('utf-8')
 
             User.objects.create(
                         email            = email,
-                        password         = decoded_hashed_pw,
+                        password         = password,
                         corporation_name = corporation_name,
                         name             = name
                         )
@@ -71,8 +71,8 @@ class SignInView(View):
         try:
             data = json.loads(request.body)
             user = User.objects.get(email=data['email'])
+            if check_password(data['password'],user.password):
 
-            if bcrypt.checkpw(data['password'].encode('utf-8'), user.password.encode('utf-8')):
                 access_token = jwt.encode({'user_id': user.id}, SECRET_KEY, algorithm=HASHING_ALGORITHM)
                 user_info    = {
                     'name'            : user.name,
@@ -80,7 +80,6 @@ class SignInView(View):
                     'email'           : user.email,
                     'is_verified'     : user.is_verified
                 }
-
                 return JsonResponse({'message': 'SUCCESS', 'access_token': access_token, 'user': user_info}, status=200)
             return JsonResponse({'message': 'INVALID_PASSWORD'}, status=401)
         

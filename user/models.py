@@ -1,4 +1,5 @@
-from django.db import models
+from django.db                   import models
+from django.contrib.auth.hashers import make_password
 
 
 class User(models.Model):
@@ -7,6 +8,10 @@ class User(models.Model):
     password         = models.CharField(max_length=200)
     corporation_name = models.CharField(max_length=200)
     is_verified      = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        self.password = make_password(self.password, None, 'pbkdf2_sha256')
+        super(User,self).save(*args, **kwargs)
 
     class Meta:
         db_table = 'users'
