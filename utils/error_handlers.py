@@ -32,6 +32,12 @@ class ExcelUrlType(ExtendedEnum):
     main_shareholders = '/corporation/main-shareholders'
 
 
+class CandleChartType(Enum):
+    daily   = 'daily'
+    weekly  = 'weekly'
+    monthly = 'monthly'
+
+
 def handle_income_statement_input_error(statement_type, display, unit, start, end, is_excel):
     if statement_type not in StatementType.__members__:
         return JsonResponse({'message': 'STATEMENT_TYPE_ERROR'}, status=400)
@@ -69,11 +75,19 @@ def handle_stock_price_crawler_input_error(error):
     status = False
 
     if type(error) == IOError:
-        error_msg = "stocks object/file was not found or unable to retrieve"
+        error_msg = "DATA_NOT_FOUND_OR_UNABLE_TO_RETREIVE"
     elif type(error) == IndexError:
-        error_msg = "stock data input was unavailable or not found in Investing.com"
+        error_msg = "DATA_NOT_AVAILABLE"
     elif type(error) == RuntimeError:
-        error_msg = "stock data was not found"
+        error_msg = "DATA_NOT_FOUND"
     elif type(error) == ValueError:
-        error_msg = "you have not registered anything"
+        error_msg = "EMPTY_VALUE"
     return status, error_msg
+
+
+def handle_candle_chart_input_error(chart_type, code):
+    if chart_type not in CandleChartType.__members__:
+        return JsonResponse({'message': 'CHART_TYPE_ERROR'}, status=400)
+    if not code:
+        return JsonResponse({'message': 'TICKER_NOT_GIVEN'}, status=400)
+    return

@@ -52,3 +52,10 @@ class StockConsumer(WebsocketConsumer):
             'current_time' : current_time,
             'change_rate'  : change_rate
         }))
+
+    def push_error_message(self, event):
+        error_msg = event['error_msg']
+
+        self.send(text_data=json.dumps({
+            'error_msg': error_msg
+        }))

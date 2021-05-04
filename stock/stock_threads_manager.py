@@ -56,7 +56,7 @@ class StockPriceCrawlerAgent(threading.Thread):
         self.channels_lock = channels_lock
         self.channel_layer = get_channel_layer()
 
-        self.stop_flag     = stop_flag
+        self.stop_flag    = stop_flag
         self.suicide_time = None
 
     def add_channel(self, channel):
@@ -85,9 +85,24 @@ class StockPriceCrawlerAgent(threading.Thread):
                 else:
                     if time.time() > self.suicide_time + SUICIDE_TIME:
                         break
-
+            
+            # 주식가격을 가져오는데 성공하면 (current_price, open_price) 를 리턴
             current_price, open_price = get_current_price(self.ticker)     
             
+            # 주식가격을 가져오는데 에러가 발생하면 get_current_price() 가
+            # (status, error_msg) 를 리턴
+            if isinstance(current_price, bool):
+                status, error_msg = current_price, open_price
+                if status == False:
+                    async_to_sync(self.channel_layer.group_send)(
+                        self.ticker_group,
+                        {
+                            'type'     : 'push_error_message',
+                            'error_msg': error_msg
+                        }
+                    )
+                    break
+
             change_rate  = (current_price - open_price) / open_price * 100
             current_time = str(datetime.datetime.now())
 
