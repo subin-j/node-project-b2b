@@ -16,6 +16,7 @@ from my_settings      import SECRET_KEY, HASHING_ALGORITHM
 from utils.decorators import auth_check
 from utils.eng2kor    import engkor
 
+
 class SignUpView(View):
     def post(self, request):
         try:
@@ -24,6 +25,7 @@ class SignUpView(View):
             email            = data['email']
             password         = data['password']
             corporation_name = data['corporation_name']
+            name             = data['name']
 
             p_email    = re.compile(r'^[a-zA-Z0-9+-_.]+@[a-zA-Z0-9_-]+\.[a-zA-Z-.]+$')
             p_password = re.compile(r'^(?=.*[!-/:-@])(?!.*[ㄱ-ㅣ가-힣]).{8,20}$')
@@ -32,6 +34,8 @@ class SignUpView(View):
                 return JsonResponse({'message': 'EMAIL_FORM_IS_NOT_VALID'}, status=400)
             if not p_password.match(password):
                 return JsonResponse({'message': 'PASSWORD_FORM_IS_NOT_VALID'}, status=400)
+            if not len(name) < 100:
+                return JsonResponse({'message': 'NAME_TOO_LONG'}, status=400)
 
             if User.objects.filter(email=email).exists():
                 return JsonResponse({'message': 'EMAIL_ALREADY_EXISTS'}, status=422)
@@ -42,7 +46,8 @@ class SignUpView(View):
             User.objects.create(
                         email            = email,
                         password         = decoded_hashed_pw,
-                        corporation_name = corporation_name
+                        corporation_name = corporation_name,
+                        name             = name
                         )
             return JsonResponse({'message': 'SUCCESS'}, status=201)
 
@@ -50,7 +55,6 @@ class SignUpView(View):
             return JsonResponse({'message': 'KEY_ERROR'}, status=400)
         except JSONDecodeError:
             return JsonResponse({'meesage': 'JSON_DECODE_ERROR'}, status=400)
-
 
     def get(self, request):
         email = request.GET.get('email')
@@ -70,7 +74,14 @@ class SignInView(View):
 
             if bcrypt.checkpw(data['password'].encode('utf-8'), user.password.encode('utf-8')):
                 access_token = jwt.encode({'user_id': user.id}, SECRET_KEY, algorithm=HASHING_ALGORITHM)
-                return JsonResponse({'message': 'SUCCESS', 'access_token': access_token}, status=200)
+                user_info    = {
+                    'name'            : user.name,
+                    'corporation_name': user.corporation_name,
+                    'email'           : user.email,
+                    'is_verified'     : user.is_verified
+                }
+
+                return JsonResponse({'message': 'SUCCESS', 'access_token': access_token, 'user': user_info}, status=200)
             return JsonResponse({'message': 'INVALID_PASSWORD'}, status=401)
         
         except User.DoesNotExist:
@@ -209,7 +220,6 @@ class GridLayoutView(View):
                         is_draggable = is_draggable
                         )
                 grid_ids.append(grid_id)
-            print(grid_ids)
             GridLayout.objects.exclude(grid_id__in=grid_ids).update(is_displyed=False)
 
             return JsonResponse({'messge': 'SUCCESS'}, status=201)
