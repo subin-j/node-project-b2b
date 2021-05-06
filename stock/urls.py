@@ -1,7 +1,7 @@
 from django.urls import path
-from .views import StockPriceView, StockCandleChart
+from .views import StockPriceView, StockCandleChart, CurrentStockPriceView
 
 urlpatterns = [
-    path('/price', StockPriceView.as_view()),
     path('/candle-chart', StockCandleChart.as_view()),
+    path('/current_price', CurrentStockPriceView.as_view()),
 ]
