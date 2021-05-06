@@ -95,6 +95,8 @@ class CorporationInfoView(View):
             return JsonResponse({"message":"VALUE_ERROR"}, status=400)
         except KeyError:
             return JsonResponse({"message":"KEY_ERROR"},status=400)
+        except Corporation.DoesNotExist:
+            return JsonResponse({'message': 'CORPORATION_DOES_NOT_EXIST'}, status=404)
 
     def export_excel(self, output):
         response                        = HttpResponse(content_type="application/vnd.ms-excel")
@@ -628,7 +630,7 @@ class CorpExcelExporter(View):
     async def get_excel_response(self, url, loop):
         response = await loop.run_in_executor(None, requests.get, url)
         return response
-    
+
     async def main(self, urls, loop):
         futures = [asyncio.ensure_future(self.get_excel_response(url, loop)) for url in urls]
         responses = await asyncio.gather(*futures)

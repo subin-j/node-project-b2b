@@ -20,11 +20,12 @@ from django.db    import transaction
 
 from .models import User, GridLayout
 
-from my_settings      import (
-                            SECRET_KEY, HASHING_ALGORITHM, NAVER_ACCESS_KEY,
-                            FROM_PHONE_NUMBER, SMS_SERVICE_ID, NAVER_SECRET_KEY,
-                            REDIS_HOST, REDIS_PORT
-                            )
+from my_settings import (
+                        SECRET_KEY, HASHING_ALGORITHM, NAVER_ACCESS_KEY,
+                        FROM_PHONE_NUMBER, SMS_SERVICE_ID, NAVER_SECRET_KEY,
+                        REDIS_HOST, REDIS_PORT
+                    )
+                    
 from utils.decorators import auth_check
 from utils.eng2kor    import engkor
 from utils.redis_connection import RedisConnection

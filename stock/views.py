@@ -11,14 +11,29 @@ from django.db.models.expressions import Window
 from django.db.models.functions   import FirstValue, ExtractDay, Cast, TruncMonth
 from django.db.models.aggregates  import Max, Min, Sum
 
+from .serializers import StockPriceSerializer
 from .models import StockPrice, Ticker
 
+from stock.stock_price_crawler import get_current_price
 from utils.error_handlers import handle_candle_chart_input_error
 
 
 class StockPriceView(View):
     def get(self, request):
         return render(request, 'stock/index.html', {})
+
+
+class CurrentStockPriceView(View):
+    def get(self, request):
+        ticker        = request.GET.get('ticker')
+        current_price, open_price = get_current_price(ticker)
+
+        if isinstance(current_price, bool):
+            if current_price == False:
+                error_msg = open_price
+                return error_msg
+
+        return current_price
 
 
 class StockCandleChart(View):
@@ -34,7 +49,11 @@ class StockCandleChart(View):
         
         ticker          = Ticker.objects.get(code=code)
         stock_prices_qs = StockPrice.objects.filter(ticker=ticker, date__gte=two_years_from_now)
-        stock_prices    = self.get_candle_chart_by_type(chart_type, stock_prices_qs)
+
+        filtered_stock_prices_qs = self.get_candle_chart_by_type(chart_type, stock_prices_qs)
+
+        serializer   = StockPriceSerializer(filtered_stock_prices_qs, many=True)
+        stock_prices = serializer.data
 
         data = {
                 'name'  : ticker.stock_name,
