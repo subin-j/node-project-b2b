@@ -54,9 +54,30 @@ CURRENCY_UNITS = {
                 'bil'  : 10 ** 8,
                 'mil'  : 10 ** 6
             }
-            
+
+
+class RatesIndicator(object):
+    @classmethod
+    def get_cagr(cls, start_year_val, end_year_val, years_between):
+        start_year_val = float(start_year_val)
+        end_year_val   = float(end_year_val)
+
+        if start_year_val < 0 or end_year_val < 0:
+            return None
+        return ((end_year_val / start_year_val) ** (1 / years_between)) - 1
+
+    @classmethod
+    def get_yoy(cls, end_year_val, before_end_year_val):
+        end_year_val        = float(end_year_val)
+        before_end_year_val = float(before_end_year_val)
+        
+        if before_end_year_val == 0:
+            return None
+        return (end_year_val / before_end_year_val) - 1
+
 
 class CorporationInfoView(View):
+    @auth_check
     def get(self,request):
         try:
             cocode   = request.GET.get('cocode')
@@ -139,7 +160,9 @@ class CorporationInfoView(View):
         wb.save(response)
         return response
 
+
 class CorporationSearchView(View):
+    @auth_check
     def get(self, request):
         try:
             keywords = request.GET.get('q')
@@ -174,6 +197,7 @@ class CorporationSearchView(View):
 
 
 class MainShareHoldersView(View):
+    @auth_check
     def get(self, request):
         try:
             cocode     = request.GET.get('cocode', '')
@@ -277,7 +301,7 @@ class CompareCAGR(object):
 
 
 class IncomeStatementView(View):
-    # @auth_check
+    @auth_check
     def get(self, request):
         try:
             statement_type = request.GET['type']
@@ -387,7 +411,7 @@ class IncomeStatementView(View):
                                     statement_type
                                     )
 
-                yoy = self.get_yoy_set(compare_yoy)
+                yoy = self.get_income_statement_yoy(compare_yoy)
                 results.append(yoy)
 
                 compare_cagr = CompareCAGR(
@@ -397,7 +421,7 @@ class IncomeStatementView(View):
                                         statement_type
                                         )
 
-                cagr = self.get_cagr_set(compare_cagr)
+                cagr = self.get_income_statement_cagr(compare_cagr)
                 results.append(cagr)
 
             output = {
@@ -445,7 +469,7 @@ class IncomeStatementView(View):
             return None
         return (end_year_val / before_end_year_val) - 1
 
-    def get_yoy_set(self, compare_income_statement_obj):
+    def get_income_statement_yoy(self, compare_income_statement_obj):
         end_year_income_statement        = compare_income_statement_obj.end_year_income_statement
         before_end_year_income_statement = compare_income_statement_obj.before_end_year_income_statement
         is_financial_corp                = compare_income_statement_obj.is_financial_corp
@@ -454,23 +478,23 @@ class IncomeStatementView(View):
         if statement_type == 'con':
             yoy = {
                 'period'        : 'YoY%',
-                'sales_con'     : self._get_yoy(
+                'sales_con'     : RatesIndicator.get_yoy(
                                             end_year_income_statement.sales_con,
                                             before_end_year_income_statement.sales_con
                                             ) if not is_financial_corp else 
-                                    self._get_yoy(
+                                    RatesIndicator.get_yoy(
                                             end_year_income_statement.asset_con,
                                             before_end_year_income_statement.asset_con
                                     ),
-                'ebit_con'      : self._get_yoy(
+                'ebit_con'      : RatesIndicator.get_yoy(
                                             end_year_income_statement.ebit_con,
                                             before_end_year_income_statement.ebit_con
                                             ),
-                'ni_con'        : self._get_yoy(
+                'ni_con'        : RatesIndicator.get_yoy(
                                             end_year_income_statement.ni_con,
                                             before_end_year_income_statement.ni_con
                                             ),
-                'ni_control_con': self._get_yoy(
+                'ni_control_con': RatesIndicator.get_yoy(
                                             end_year_income_statement.ni_control_con,
                                             before_end_year_income_statement.ni_control_con
                                             )
@@ -479,26 +503,26 @@ class IncomeStatementView(View):
 
         yoy = {
                 'period'        : 'YoY%',
-                'sales_ind'     : self._get_yoy(
+                'sales_ind'     : RatesIndicator.get_yoy(
                                             end_year_income_statement.sales_ind,
                                             before_end_year_income_statement.sales_ind
                                             ) if not is_financial_corp else 
-                                    self._get_yoy(
+                                    RatesIndicator.get_yoy(
                                             end_year_income_statement.asset_ind,
                                             before_end_year_income_statement.asset_ind
                                     ),
-                'ebit_ind'      : self._get_yoy(
+                'ebit_ind'      : RatesIndicator.get_yoy(
                                             end_year_income_statement.ebit_ind,
                                             before_end_year_income_statement.ebit_ind
                                             ),
-                'ni_ind'        : self._get_yoy(
+                'ni_ind'        : RatesIndicator.get_yoy(
                                             end_year_income_statement.ni_ind,
                                             before_end_year_income_statement.ni_ind
                                             )
                 }
         return yoy
 
-    def get_cagr_set(self, compare_income_statement_obj):
+    def get_income_statement_cagr(self, compare_income_statement_obj):
         start_year_income_statement = compare_income_statement_obj.start_year_income_statement
         end_year_income_statement   = compare_income_statement_obj.end_year_income_statement
         is_financial_corp           = compare_income_statement_obj.is_financial_corp
@@ -509,27 +533,27 @@ class IncomeStatementView(View):
         if statement_type == 'con':
             cagr = {
                 'period'        : 'CAGR%',
-                'sales_con'     : self._get_cagr(
+                'sales_con'     : RatesIndicator.get_cagr(
                                             start_year_income_statement.sales_con,
                                             end_year_income_statement.sales_con,
                                             years_between
                                             ) if not is_financial_corp else
-                                    self._get_cagr(
+                                    RatesIndicator.get_cagr(
                                             start_year_income_statement.asset_con,
                                             end_year_income_statement.asset_con,
                                             years_between
                                             ),
-                'ebit_con'      : self._get_cagr(
+                'ebit_con'      : RatesIndicator.get_cagr(
                                             start_year_income_statement.ebit_con,
                                             end_year_income_statement.ebit_con,
                                             years_between
                                             ),
-                'ni_con'        : self._get_cagr(
+                'ni_con'        : RatesIndicator.get_cagr(
                                             start_year_income_statement.ni_con,
                                             end_year_income_statement.ni_con,
                                             years_between
                                             ),
-                'ni_control_con': self._get_cagr(
+                'ni_control_con': RatesIndicator.get_cagr(
                                             start_year_income_statement.ni_control_con,
                                             end_year_income_statement.ni_control_con,
                                             years_between
@@ -539,22 +563,22 @@ class IncomeStatementView(View):
 
         cagr = {
             'period'        : 'CAGR%',
-            'sales_ind'     : self._get_cagr(
+            'sales_ind'     : RatesIndicator.get_cagr(
                                         start_year_income_statement.sales_ind,
                                         end_year_income_statement.sales_ind,
                                         years_between
                                         ) if not is_financial_corp else
-                                self._get_cagr(
+                                RatesIndicator.get_cagr(
                                         start_year_income_statement.asset_ind,
                                         end_year_income_statement.asset_ind,
                                         years_between
                                         ),
-            'ebit_ind'      : self._get_cagr(
+            'ebit_ind'      : RatesIndicator.get_cagr(
                                         start_year_income_statement.ebit_ind,
                                         end_year_income_statement.ebit_ind,
                                         years_between
                                         ),
-            'ni_ind'        : self._get_cagr(
+            'ni_ind'        : RatesIndicator.get_cagr(
                                         start_year_income_statement.ni_ind,
                                         end_year_income_statement.ni_ind,
                                         years_between
@@ -636,6 +660,7 @@ class CorpExcelExporter(View):
         responses = await asyncio.gather(*futures)
         return responses
 
+    @auth_check
     def get(self, request):
         try:
             urls        = list(set(request.GET.getlist('url')))
@@ -682,6 +707,7 @@ class CorpExcelExporter(View):
 
 
 class ConglomerateListView(View):
+    @auth_check
     def get(self, request):
         try:
             cocode       = request.GET.get('cocode')
