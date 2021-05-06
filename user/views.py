@@ -37,6 +37,10 @@ SMS_AUTH_TIMEOUT = 300
 
 
 class SignUpView(View):
+    def __init__(self):
+        super(SignUpView, self).__init__()
+        self.rd = RedisConnection()
+
     def post(self, request):
         try:
             data = json.loads(request.body)
@@ -47,8 +51,7 @@ class SignUpView(View):
             name              = data['name']
             auth_phone_number = data['auth_phone_number']
 
-            rd   = RedisConnection()
-            auth = rd.conn.hgetall(auth_phone_number)
+            auth = self.rd.conn.hgetall(auth_phone_number)
             if not auth:
                 return JsonResponse({'message': 'CODE_AUTH_ERROR'}, status=400)                
 
@@ -176,7 +179,7 @@ class ProfileView(View):
     
     def edit_corporation_name(self, new_corporation_name):
         if new_corporation_name == self.login_user.corporation_name:
-            return JsonResponse({'message':'SAME_CORP_NAME'}, status=400)
+            return JsonResponse({'message': 'SAME_CORP_NAME'}, status=400)
 
         self.login_user.corporation_name = new_corporation_name
         self.login_user.save()
@@ -267,6 +270,10 @@ class GridLayoutView(View):
 
 
 class SMSCodeRequestView(View):
+    def __init__(self):
+        super(SMSCodeRequestView, self).__init__()
+        self.rd = RedisConnection()
+
     def post(self, request):
         try:
             data              = json.loads(request.body)
@@ -278,9 +285,8 @@ class SMSCodeRequestView(View):
 
             auth = {'hashed_random_code': hashed_random_code, 'is_verified': is_verified}
 
-            rd = RedisConnection()
-            rd.conn.hmset(auth_phone_number, auth)
-            rd.conn.expire(auth_phone_number, SMS_AUTH_TIMEOUT)
+            self.rd.conn.hmset(auth_phone_number, auth)
+            self.rd.conn.expire(auth_phone_number, SMS_AUTH_TIMEOUT)
 
             timestamp         = str(int(time.time() * 1000))
             signature         = self.make_signature()
@@ -333,14 +339,17 @@ class SMSCodeRequestView(View):
         
 
 class SMSCodeCheckView(View):
+    def __init__(self):
+        super(SMSCodeCheckView, self).__init__()
+        self.rd = RedisConnection()
+
     def post(self, request):
         try:
             data              = json.loads(request.body)
             auth_code         = data['auth_code']
             auth_phone_number = data['auth_phone_number']
 
-            rd   = RedisConnection()
-            auth = rd.conn.hgetall(auth_phone_number)
+            auth = self.rd.conn.hgetall(auth_phone_number)
             if not auth:
                 return JsonResponse({'message': 'CODE_EXPIRED'}, status=400)
 
@@ -350,7 +359,8 @@ class SMSCodeCheckView(View):
                 return JsonResponse({'message': 'CODE_NOT_MATCHED'}, status=400)
 
             auth['is_verified'] = '1'
-            rd.conn.hmset(auth_phone_number, auth)
+            
+            self.rd.conn.hmset(auth_phone_number, auth)
             return JsonResponse({'message': 'SUCCESS'}, status=201)
 
         except KeyError:
