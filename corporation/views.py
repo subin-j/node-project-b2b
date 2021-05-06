@@ -453,22 +453,6 @@ class IncomeStatementView(View):
         except ValueError:
             return JsonResponse({'message': 'VALUE_ERROR'}, status=400)
 
-    def _get_cagr(self, start_year_val, end_year_val, years_between):
-        start_year_val = float(start_year_val)
-        end_year_val   = float(end_year_val)
-
-        if start_year_val < 0 or end_year_val < 0:
-            return None
-        return ((end_year_val / start_year_val) ** (1 / years_between)) - 1
-
-    def _get_yoy(self, end_year_val, before_end_year_val):
-        end_year_val        = float(end_year_val)
-        before_end_year_val = float(before_end_year_val)
-        
-        if before_end_year_val == 0:
-            return None
-        return (end_year_val / before_end_year_val) - 1
-
     def get_income_statement_yoy(self, compare_income_statement_obj):
         end_year_income_statement        = compare_income_statement_obj.end_year_income_statement
         before_end_year_income_statement = compare_income_statement_obj.before_end_year_income_statement
